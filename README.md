@@ -1,36 +1,171 @@
-# contest2026_029_sudo
+# 资料库 · 腕上离线知识检索
 
-👋 欢迎参加 **2026 首届 openvela AI 硬件开发者大赛**！
-
-这是组委会为你的队伍创建的**专属参赛仓库**（本仓为样例/模板，队伍编号 `029`；你看到的将是你自己的 `contest2026_<编号>_<队伍名>`）。比赛期间，你的全部参赛代码、打包产物与 AI Coding 日志都提交到这里。
-
-> 本仓既是「代码仓」，又内置了一键拉取整套 openvela 工程的 `repo` 清单（manifest）。你只需跟它打交道，**自始至终只动一个文件夹**。
+> 2026 首届 openvela AI 硬件开发者大赛 · **快应用 / 手表应用创新**赛道
+> 队伍编号 `029` · 队名 `sudo`
 
 ---
 
-## 一、先读这些官方文档
+## 一、作品简介
 
-**通用（所有赛道必读）：**
+**《资料库》是一款完全离线运行的手表端知识检索应用**。它把历史、诗词、英语、健康、生活、学习六大类共 **5600 条**结构化资料装进手表，用户在表盘上用**极短的关键词**（一两个汉字即可）就能秒级定位到条目，并在详情页查看完整内容。
 
-| 文档                                                                                                                                     | 用途                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [《大赛总览》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/contest_overview.md)                        | 赛道、流程、评分、资源，建议先通读             |
-| [《参赛代码提交指南》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/code_submission_guide.md)           | 仓库获取、提交流程、时间与权限（**以此为准**） |
-| [《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md) | 如何导出 AI 对话日志并提交到 `logs/`           |
+设计初衷来自一个真实痛点：**手表屏幕小、输入难、网络不可靠**——所以它不依赖任何云端服务，所有索引与内容都常驻腕上；交互也围绕"少打字"设计：能用一次点击完成的，绝不要求用户敲第二个字。
 
-**按你的赛道选读（三选一）：**
-
-| 赛道                  | 教程导航                                                                                                                                                 |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 快应用 / 手表应用创新 | [快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)                         |
-| AI 硬件产品创新       | [AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)              |
-| 新硬件适配            | [新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md) |
+作品基于 openvela 快应用框架（`.ux` 单文件组件，类 Vue 语法）开发，可运行于 openvela 模拟器与真实手表设备。
 
 ---
 
-## 二、第一步：拉取完整工程
+## 二、核心功能
 
-用组委会提供的命令一键拉取「openvela 全量源码 + 你的专属仓」：
+### 1. 离线搜索引擎（自研，零第三方依赖）
+
+纯 JS 实现了完整检索链路：
+
+- **哈希分桶索引**：资料按 token 哈希散列到 2048 个桶，检索时先定位桶再取候选，避免全量扫描；
+- **逐字分词 + 前缀匹配**：中文按单字入桶（「健康」拆成「健」「康」两字均可命中），英文按 3~N 位前缀入桶（输入 `proj` 能命中 `project`）；
+- **跨集聚合搜索**：一次检索遍历全部资料集，结果按「各集轮流取样」交错排序，避免某一集占满首页；
+- **两级缓存**：块索引与 Map 数据缓存于设备 storage，二次检索显著快于首次。
+
+### 2. 六大资料集 + 标签筛选
+
+首页以 6 个入口组织全部资料，**点击任意资料卡进入该资料详情视图**：
+
+- 展示**资料图标、资料简介**，以及从数据中提取的**全部标签**（原分类词）；
+- **点标签即筛选**：标签变蓝表示"只看带这个标签的资料"，例如在「健康」里只看「急救」；
+- 支持进入资料后直接输入关键词搜索，搜索范围自动限定在该资料（含选中标签）内。
+
+| 资料 | 条目数 | 标签（原分类词）示例 |
+| --- | --- | --- |
+| 历史 | 1000 | 亚洲 / 欧洲 / 非洲 / 南美洲 / 北美洲 / 其他 |
+| 诗词 | 800 | 诗 / 词 / 先秦 / 魏晋 / 唐朝 / 五代 / 宋朝 / 元朝 / 清朝 |
+| 英语 | 800 | 四级 / 六级 |
+| 健康 | 1000 | 健康 / 心理情绪 / 急救 / 护肤美妆 / 运动 |
+| 生活 | 1200 | 亲子育儿 / 出行旅游 / 厨房烹饪 / 宠物照料 / 房屋维修 / 民俗常识 / 理财省钱 / 职场办公 / 节气节日 / 衣物打理 … |
+| 学习 | 800 | 学习效率 / 手机数码 / 百科 |
+
+### 3. 词条详情
+
+条目名、所属资料与年代、关键词标签、正文分字段呈现——**字段名与数量由各资料的 `meta.json` 声明**，非页面硬编码，新增资料集无需改页面。
+
+### 4. 收藏与快捷入口
+
+收藏夹支持查看与移除；首页第二屏提供「设置 / 收藏」快捷卡片。
+
+### 5. 资料集可扩充（架构预留）
+
+资料集以「独立文件夹 + meta 自描述」组织：每个集自带字段声明、分片数据与哈希索引，理论上可通过手机蓝牙向手表 `files` 区推送新集并动态注册；内置资料亦支持应用覆盖更新。
+
+---
+
+## 三、技术亮点
+
+### 1. 模块化资料集（可插拔）
+
+每个资料集是**自包含目录**：`meta.json`（字段角色声明）+ `meta.txt`（引擎物化视图）+ `map_*.txt` / `detail_*.txt`（分片）+ `block_0.txt`（哈希索引）+ `icon.png`。集数 = 首页入口数，增删资料不动一行业务代码。
+
+### 2. 数据侧与引擎侧分词严格对齐
+
+入桶分词必须与查询分词**完全一致**，否则会出现"数据里明明有、就是搜不到"的隐蔽缺陷。工程用同一份 `tokenize` 规则生成索引，并与引擎 `_parseQuery` 逐条对齐（含"纯字母词入 3..len 全部前缀、其余逐字符入桶"的细则）。
+
+### 3. 面向小屏的性能工程
+
+手表的内存与 I/O 远弱于手机，工程为此做了多项针对性优化：
+
+- **结果区独立滚动容器**：结果列表在固定高度内自滚，页面总高恒定，避免超长滚动内容的滚动与重排开销；
+- **渐进显示**：搜索结果默认只渲染 5 条，点「显示更多」再追加，把单次渲染节点数压到最低；
+- **翻页成本恒定**：跨集聚合时每集只调用一次引擎（取前 `pageSize × page` 条后本地切片），避免"翻到第 N 页就检索 N 次"的乘数放大；
+- **禁用动态 style 绑定**：全部改为 `computed` 预拼类名 + 模板纯变量插值——动态内联样式在小屏固件上既拖慢渲染，还可能触发 DOM 属性异常；
+- **形态差异由 `@media` 固化**：胶囊屏／方形屏的尺寸差异全部在样式层声明，运行时不计算布局。
+
+### 4. 稳健性处理
+
+- 文件读取回调在部分打包模式下存在丢失风险，因此**搜索链路设置双层超时兜底**（单集 8s / 页面 10s），保证界面不会"假死"；
+- 引擎内存淘汰（LRU）循环带**上限非零断言**，避免上限被配置为 0 时 `length >= 0` 恒真导致的死循环；
+- 缓存键携带数据版本号，数据更新后旧缓存自动失效；并提供「关于」连点四下清空全部缓存的手动入口。
+
+---
+
+## 四、目录结构
+
+```
+quickapp/hello_quickapp/          # 快应用工程（映射到 packages/apps/contest2026_029_hello_quickapp）
+├── package.json                  # 工程描述与构建脚本（aiot build）
+├── src/
+│   ├── manifest.json             # 应用清单（包名 / 图标 / 页面路由 / 权限）
+│   ├── app.ux                    # 应用入口：全局初始化、运行日志、全局接口挂载
+│   ├── SearchEngine/
+│   │   ├── SearchEngine.js       # 离线搜索引擎（分词 / 哈希分桶 / 分片加载 / 两级缓存）
+│   │   ├── DatasetManager.js     # 资料集注册表 + 多引擎实例池 + 跨集聚合搜索
+│   │   └── DatasetDetail.js      # 跨资料集详情读取与字段映射
+│   ├── components/InputMethod/   # 表盘输入组件（键盘）
+│   ├── pages/                    # 页面：首页 / 详情 / 收藏 / 设置 / 加载 / 确认 / 结果
+│   └── common/                   # 资源与资料数据
+│       ├── icons/ · logo.png
+│       └── datasets/             # 六大资料集（历史集位于 common 根，其余在 datasets/<集名>/）
+├── tools/                        # 数据生成脚本（Node，可复现全部资料）
+│   ├── build_datasets_batch.js   # 批量资料集生成（分组合并、按内容质量采样、索引构建）
+│   ├── build_poems_dataset.js    # 诗词集生成
+│   ├── rebuild_english_cet.js    # CET-4/6 词表生成
+│   └── slim_history.js           # 历史集精简与索引重建
+└── dist/
+    └── vela.Databank.debug.1.16.31.rpk   # 构建产物（可直接安装体验）
+```
+
+> 目录名沿用组委会模板的 `hello_quickapp`，以匹配 `contest2026_029_sudo.xml` 中既有的 `<linkfile>` 映射，无需改动 openvela 主工程。
+
+---
+
+## 五、构建与运行
+
+### 构建
+
+```bash
+cd quickapp/hello_quickapp
+npm install          # 安装 @aiot-toolkit 等依赖
+npx aiot build       # 产物输出到 dist/
+```
+
+### 安装到 openvela 模拟器 / 手表
+
+```bash
+adb push dist/vela.Databank.debug.1.16.31.rpk /data/local/tmp/app.rpk
+adb shell pm install /data/local/tmp/app.rpk
+adb shell am start vela.Databank
+```
+
+首次进入应用后，在**设置 → 加载数据**构建一次本地索引即可开始搜索（索引会缓存，后续启动即时可用）。
+
+### 重新生成资料数据（可选）
+
+`tools/` 下的脚本可从原始文本（5 列 / 6 列格式）重新生成全部资料集：分组合并、按内容质量采样、生成分片与哈希索引一次完成。调整资料集简介、标签、条目数都在这一层进行。
+
+---
+
+## 六、AI 协作开发说明
+
+本作品全程采用 AI 辅助开发，人机分工如下：
+
+- **AI 承担**：架构设计讨论、代码编写与重构、数据管道脚本、缺陷定位与修复、文档整理；
+- **队员承担**：需求决策、真机与模拟器实测反馈、验收判断、参赛材料把关。
+
+开发过程中的 AI 对话日志按组委会要求导出至本仓 [`logs/`](logs/) 目录。
+
+---
+
+## 七、已知限制与后续计划
+
+| 项 | 现状 | 计划 |
+| --- | --- | --- |
+| 圆形表盘适配 | 未适配（作品面向胶囊屏与方形屏） | 按需补充圆形屏样式 |
+| 搜索响应速度 | 已做多项优化，真机绝对耗时仍在验证 | 继续优化单次检索的 I/O 路径 |
+| 蓝牙推送资料集 | 数据结构与注册机制已就绪 | 补齐手机端推送工具与断点续传 |
+| 资料规模 | 5600 条（按内容质量筛选） | 按需扩充 |
+
+---
+
+## 八、仓库通用说明
+
+本仓同时是组委会分配的专属参赛仓，内置可一键拉取整套 openvela 工程的 `repo` 清单：
 
 ```bash
 repo init -u https://github.com/open-vela/contest2026_029_sudo \
@@ -38,111 +173,4 @@ repo init -u https://github.com/open-vela/contest2026_029_sudo \
 repo sync -c -j8
 ```
 
-同步后，你的整个仓库位于工作区的 `contest2026_029_sudo/`，openvela 全量源码在外层（`nuttx/`、`apps/`、`packages/`、`vendor/` 等）。
-
----
-
-## 三、第二步：在哪里写代码
-
-**只在自己的仓目录 `contest2026_029_sudo/` 里开发。** 不同作品形态放在对应子目录，manifest 会通过 `<linkfile>` 把它们**软链**到 openvela 编译树该在的位置——你不用手动 copy：
-
-| 作品形态 | 你的代码放这里             | 系统自动映射到                                 |
-| -------- | -------------------------- | ---------------------------------------------- |
-| 应用     | `app/hello_app/`           | `packages/demos/contest2026_029_hello_app`     |
-| 快应用   | `quickapp/hello_quickapp/` | `packages/apps/contest2026_029_hello_quickapp` |
-| 板级适配 | `board/contest_board/`     | `vendor/openvela/boards/contest2026_029_board` |
-
-> 用不到的形态目录可以删掉；新增作品时按同样规则加子目录，并在 `contest2026_029_sudo.xml` 里补一条 `<linkfile>` 映射即可。**生产仓库（packages/nuttx/vendor 等）零改动。**
-
-建议仓库目录约定（便于评委定位）：
-
-```text
-app/ | quickapp/ | board/   # 你的作品代码
-logs/                       # AI Coding 日志（主动导出后提交，格式见 logs/README.md）
-README.md                   # 作品说明（提交前请改成你自己的，见第六节）
-```
-
-> 仓内附带了一个 `.gitignore.example`，给出了**编译产物**等不需要进仓的文件示例。如需启用，`cp .gitignore.example .gitignore` 后按需增删即可。**注意 `logs/` 下最终导出的 AI Coding 日志必须提交，不要忽略。**
->
-> `logs/` 的目录结构与提交格式见 [logs/README.md](logs/README.md)。
-
----
-
-## 四、第三步：编译与运行
-
-编译/运行步骤随作品形态不同而不同，请参考你所在赛道的教程导航：
-
-- 快应用 / 手表应用：[快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)（含模拟器与开发板部署）。
-- AI 硬件产品创新：[AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)（环境搭建、编译烧录、Skill 开发）。
-- 新硬件适配：[新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md)（BSP 移植、最小 NSH 基线）。
-
-子目录已通过 manifest 中的 `<linkfile>` 软链进 openvela 编译树，因此构建在 openvela 工作区**根目录**（即你这个仓的上一级）进行。openvela 使用 `build.sh` 作为统一入口，接收一个 **board config 路径**作为参数：
-
-```bash
-# 进入 openvela 工作区根目录（你的仓的上一级）
-cd ..
-
-# 通用语法：第一个参数是 board config 路径，第二个参数可以是 menuconfig / distclean 等
-./build.sh <board-config-path> [menuconfig|distclean] [-j8]
-```
-
-> 具体的 board config 路径、目标产物、模拟器/真机部署方式请以你所在赛道的教程导航为准。本仓 `app/` `quickapp/` `board/` 三个示例骨架对应的 Kconfig 选项可通过 `menuconfig` 启用。
-
----
-
-## 五、第四步：提交作品
-
-1. **fork** 你的专属仓 → 开发 → `git commit` 并推送 → 向专属仓发起 **Pull Request**，可**自行 review 并合入**（无需等组委会）。
-2. **AI Coding 日志**：与 AI 工具的对话会自动记录到本机 staging（不会自动上传），需你**主动导出/打包**选定会话到仓内 `logs/` 目录后一并提交。详见[《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md)。
-3. 若需改动 **nuttx 等公共仓库**，不在本仓改，而是 fork 对应公共仓、以 PR 提交到 `dev-ai-contest-2026` 分支，由组委会 review 后合入。
-
-> ⏰ **提交作品截止：9 月 20 日**。截止后统一收回 push 权限，仍可查看 / clone。
->
-> 获奖后再按要求将作品 PR 至 openvela 上游对应仓库（走标准 PR + CI 流程）。
-
-### 关于 PR 与 CLA
-
-- 本仓所有改动通过 **Pull Request** 合入（分支保护强制，可自行合入自己的 PR）。
-- 首次贡献需在[**官网签署 CLA**](https://openvela.com/#/community/cla)；PR 上会自动跑 `cla/signature` 检查，在官网签署成功后，在 PR 评论 `/check-cla` 复检即可通过。
-
----
-
-## 六、提交前：把本 README 改成你的作品说明
-
-本文件目前是组委会给的**使用说明书**。**作品提交前，请把它替换成你自己作品的说明**，方便评委快速了解你做了什么、怎么跑起来。建议至少包含以下内容：
-
-```markdown
-# <你的作品名>
-
-## 一、作品简介
-<一句话/一段话说明这个作品是什么、解决什么问题、亮点在哪>
-
-## 二、选题方向
-<快应用 / 手表应用创新 ｜ AI 硬件产品创新 ｜ 新硬件适配 ｜ 自定方向，并简述理由>
-
-## 三、目录结构
-<列出你这个仓里各目录/文件的作用，例如：>
-- `app/xxx/`        — <说明>
-- `board/xxx/`      — <说明>
-- `quickapp/xxx/`   — <说明>
-- `logs/`           — AI Coding 日志
-- `docs/` 或其他    — <说明>
-
-## 四、运行方式
-<拉取工程后，如何编译、烧录/部署、运行的完整步骤；最好能让评委照着一步步复现>
-
-## 五、AI Coding 使用说明
-<说明本作品如何借助 AI 辅助开发：
-- 在需求拆解 / 方案设计 / 编码 / 调试 / 文档等环节如何与 AI 协作；
-- AI 对开发效率或质量带来的实际帮助。
-完整对话日志见 logs/ 目录>
-```
-
-> 提示：将会根据「作品本身 + 你的 README 说明 + `logs/` 里的 AI Coding 日志」来理解和评估你的作品，README 写清楚很重要。
-
----
-
-## 附：仓库命名规范
-
-`contest2026_<编号>_<队伍名>` — 编号三位零填充；队名 slug（全小写、英文/拼音、连字符）。例：`contest2026_029_sudo`。
-（仓库由组委会统一创建，**每队仅一个仓**，无需自行命名。）
+官方文档索引（赛道规则 / 提交指南 / AI 日志手册）见组委会文档仓：[open-vela/docs · dev-ai-contest-2026](https://github.com/open-vela/docs/tree/dev-ai-contest-2026/zh-cn/contest_2026)。

@@ -1,0 +1,100 @@
+100|cozy,四级|adj. 舒适的
+101|gallery,四级|n. 美术馆
+102|enormous,四级|adj. 巨大的
+103|obtain,四级|v. 获得
+104|desert,四级|v. 抛弃
+105|aviate,四级|v. 驾驶飞机
+106|determine,四级|v. 决定；下决心
+107|disappear,四级|v. 不见，消失
+108|entitle,四级|v. 使具有权利，使具有资格
+109|relieve,四级|v. 解除，减轻，缓解
+110|generosity,四级|n. 慷慨，大方
+111|colleague,四级|n. 同事
+112|undertake,四级|v. 承担
+113|convenient,四级|adj. 方便的
+114|preferentially,四级|adv. 优先地
+115|column,四级|n. 专栏
+116|affectionate,四级|adj. 深情的，柔情的
+117|issue,四级|v. 发表〔声明〕 n. 问题
+118|inquire,四级|v. 询问
+119|groundlessly,四级|adv. 无缘无故地，无根据地
+120|independently,四级|adv. 独立地
+121|approach,四级|v. 靠近 n. 方法
+122|administration,四级|n. 管理；〔某一时期的〕政府
+123|adversity,四级|n. 逆境，不幸
+124|technician,四级|n. 技术员，技师
+125|regular,四级|adj. 有规律的，经常的
+126|miscalculation,四级|n. 算错，误算
+127|hinder,四级|v. 阻碍
+128|selection,四级|n. 选择，挑选
+129|tide,四级|n. 潮水
+130|superior,四级|adj. 上级的，较高的 n. 上级，长官
+131|matter,四级|v. 要紧，重要
+132|passively,四级|adv. 消极地
+133|grant,四级|v. 授予；允许
+134|liberation,四级|n. 解放
+135|observe,四级|v. 遵守
+136|institute,四级|v. 建立 n. 〔从事科研或教育等的〕机构；学院；研究院
+137|dormitory,四级|n. 宿舍
+138|awful,四级|adj. 可怕的，骇人的
+139|emergency,四级|n. 紧急情况
+140|stress,四级|n. 压力；重音
+141|launch,四级|v. 发动
+142|suppose,四级|v. 料想，以为；假定；期望
+143|remove,四级|v. 消除，移除
+144|exposure,四级|n. 暴露；揭露
+145|promote,四级|v. 促进，提升；推销
+146|engage,四级|v. 从事；吸引
+147|uncertain,四级|adj. 不确定的
+148|accommodate,四级|v. 为…提供住宿
+149|slave,四级|n. 奴隶
+150|mature,四级|adj. 成熟的
+151|contrast,四级|n. 对照物 v. 对比
+152|clinic,四级|n. 诊所
+153|award,四级|v. 授予；判给 n. 奖(金)
+154|worthwhile,四级|adj. 有价值的
+155|cruelty,四级|n. 残暴，残酷
+156|threaten,四级|v. 威胁
+157|chemical,四级|adj. 化学的 n. 化学制品
+158|consistent,四级|adj. 一致的
+159|renew,四级|v. 〔中止后〕重新开始，继续
+160|takeoff,四级|n. 起飞
+161|innocent,四级|adj. 无辜的；天真的
+162|currently,四级|adv. 当前；一般地
+163|dropout,四级|n. 辍学者
+164|replace,四级|v. 代替
+165|sightseeing,四级|n. 观光
+166|honor,四级|n. 荣誉；崇敬，敬重，敬意
+167|imitate,四级|v. 模仿
+168|installment,四级|n. 分期付款
+169|personality,四级|n. 个性，性格
+170|headquarter,四级|v. 设立总部，在…设立总部
+171|ingredient,四级|n. 成分，原料
+172|revenue,四级|n. 收入
+173|sensitive,四级|adj. 敏感的
+174|particular,四级|adj. 特别的，特指的；讲究的；挑剔的，吹毛求疵的
+175|tumor,四级|n. 瘤
+176|consequence,四级|n. 结果，成果
+177|explicitly,四级|adv. 直接地，明确地
+178|sway,四级|v. 影响
+179|technical,四级|adj. 技术的
+180|expert,四级|adj. 熟练的，内行的
+181|harm,四级|n. 损害；危害；伤害 v. 伤害，损害〔某事物〕
+182|imaginary,四级|adj. 虚构的，想象的
+183|contaminate,四级|v. 污染，弄脏
+184|soar,四级|v. 猛增
+185|solely,四级|adv. 单独地，唯一地
+186|tremendous,四级|adj. 巨大的
+187|civilization,四级|n. 文明
+188|tough,四级|adj. 困难的
+189|gift,四级|n. 礼物；天赋
+190|scale,四级|n. 规模；比例
+191|injure,四级|v. 使受伤
+192|embrace,四级|v. 拥抱；欣然接受，乐意采纳 (新思想、意见、宗教等)
+193|seldom,四级|adv. 很少，罕见
+194|performance,四级|n. 演出；履行；表现
+195|violate,四级|v. 违反
+196|associate,四级|v. 把……联系起来；交往；
+197|privacy,四级|n. 隐私
+198|choke,四级|v. 使窒息
+199|capable,四级|adj. 能干的，有能力的

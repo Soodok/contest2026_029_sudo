@@ -1,0 +1,424 @@
+<script>
+  // ========== 搜索引擎（全局引擎初始化，从原 splash.ux 提取到 app 生命周期）==========
+  import { getSearchEngine } from './SearchEngine/SearchEngine.js'
+  // 应用版本（与 src/manifest.json 的 versionName 保持同步——改版本时两处一起改）
+  const APP_VERSION = '1.16.31'
+  import { searchAllAsync, getItemByGlobalId, getDatasetEntries, getGroupEntries, getDatasetInfo } from './SearchEngine/DatasetManager.js'
+
+  // ========== 日志系统（直接操作 storage）==========
+  var LOG_KEY = 'app_runtime_logs'
+  var MAX_LOGS = 30
+  var logQueue = []
+
+  // 导入 storage（注意：需要在函数内部 require）
+  function getStorage() {
+    return require('@system.storage')
+  }
+
+  // 保存日志到 storage
+  function saveLogsToStorage() {
+    try {
+      var storage = getStorage()
+      storage.set({
+        key: LOG_KEY,
+        value: JSON.stringify(logQueue.slice(0, MAX_LOGS))
+      })
+    } catch(e) {
+      console.log('日志保存失败:', e)
+    }
+  }
+
+  // 加载已有日志
+  function loadLogsFromStorage() {
+    try {
+      var storage = getStorage()
+      storage.get({
+        key: LOG_KEY,
+        success: function(data) {
+          try {
+            var saved = JSON.parse(data)
+            if (saved && saved.length) {
+              logQueue = saved
+            }
+          } catch(e) {}
+        },
+        fail: function() {}
+      })
+    } catch(e) {}
+  }
+
+  // 初始化：加载已有日志
+  loadLogsFromStorage()
+
+  // 手写补零（避免 padStart 的轻量运行时兼容风险——见 CC_BRIEF 已知坑 #5）
+  function pad2(n) {
+    return n < 10 ? '0' + n : '' + n
+  }
+
+  // 添加日志
+  global.addRuntimeLog = function(msg, level) {
+    var now = new Date()
+    var time = pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds())
+
+    logQueue.unshift({
+      time: time,
+      msg: msg,
+      level: level || 'info'
+    })
+
+    if (logQueue.length > MAX_LOGS) {
+      logQueue.pop()
+    }
+
+    // 立即保存
+    saveLogsToStorage()
+
+    // 控制台输出
+    console.log('[' + (level || 'info').toUpperCase() + '] ' + msg)
+  }
+
+  // 获取所有日志
+  global.getRuntimeLogs = function() {
+    return logQueue
+  }
+
+  // 清空日志
+  global.clearRuntimeLogs = function() {
+    logQueue = []
+    saveLogsToStorage()
+  }
+
+  // 记录应用启动
+  global.addRuntimeLog('应用启动', 'info')
+
+  // ========== 引擎初始化（从 splash.ux 提取，移入 app 生命周期）==========
+  var engineInstance = null
+  var engineInitialized = false
+
+  // 读取设置（含 quick_launch / auto_search / theme / defaultCategory / defaultRegion）
+  function loadSettingsAsync() {
+    return new Promise(function(resolve) {
+      var loaded = 0
+      var total = 7
+      var storage = require('@system.storage')
+
+      var checkDone = function() {
+        loaded++
+        if (loaded >= total) resolve()
+      }
+
+      var timeout = setTimeout(function() {
+        resolve()
+      }, 3000)
+
+      storage.get({
+        key: 'quick_launch',
+        success: function(data) {
+          global.quickLaunch = data === 'true'
+          checkDone()
+        },
+        fail: function() {
+          global.quickLaunch = false
+          checkDone()
+        }
+      })
+
+      storage.get({
+        key: 'auto_search',
+        success: function(data) {
+          global.autoSearch = data === 'true'
+          checkDone()
+        },
+        fail: function() {
+          global.autoSearch = false
+          checkDone()
+        }
+      })
+
+      storage.get({
+        key: 'app_theme',
+        success: function(data) { global.theme = data === 'dark' ? 'dark' : 'light'; checkDone() },
+        fail: function() { global.theme = 'light'; checkDone() }
+      })
+
+      storage.get({
+        key: 'defaultCategory',
+        success: function(data) { global.defaultCategory = data || 'all'; checkDone() },
+        fail: function() { global.defaultCategory = 'all'; checkDone() }
+      })
+
+      storage.get({
+        key: 'defaultRegion',
+        success: function(data) { global.defaultRegion = data || 'all'; checkDone() },
+        fail: function() { global.defaultRegion = 'all'; checkDone() }
+      })
+
+      storage.get({
+        key: 'yearIndexCache',
+        success: function() { checkDone() },
+        fail: function() { checkDone() }
+      })
+
+      storage.get({
+        key: 'keywordIndexCache',
+        success: function() { checkDone() },
+        fail: function() { checkDone() }
+      })
+
+      setTimeout(function() { clearTimeout(timeout) }, 3100)
+    })
+  }
+
+  // 加载名言数据（不阻塞）
+  function loadQuotes() {
+    var file = require('@system.file')
+    file.readText({
+      uri: '/common/quotes.txt',
+      success: function(data) {
+        var lines = data.text.split('\n')
+        global.quotes = lines
+          .filter(function(line) { return line.indexOf('|') !== -1 })
+          .map(function(line) {
+            var parts = line.split('|')
+            return { text: parts[0], author: parts[1] }
+          })
+        global.addRuntimeLog('名言数据加载完成', 'success')
+      },
+      fail: function() {
+        global.quotes = [{ text: '以史为镜，可以知兴替', author: '李世民' }]
+        global.addRuntimeLog('名言数据加载失败，使用默认', 'warn')
+      }
+    })
+  }
+
+  // 挂载全局接口（幂等，可在引擎就绪前后多次调用）
+  function mountToGlobal() {
+    var engine = engineInstance
+    if (!engine) return
+
+    global.addRuntimeLog('挂载全局接口', 'info')
+
+    // mapChunkSize / detailChunkSize：meta 加载前取默认值，引擎就绪后再刷新
+    global.mapChunkSize = engine.mapChunkSize || 100
+    global.detailChunkSize = engine.detailChunkSize || 100
+
+    var regionMap = {
+      'asia': '亚洲',
+      'europe': '欧洲',
+      'africa': '非洲',
+      'north_america': '北美洲',
+      'south_america': '南美洲',
+      'other': '其他'
+    }
+
+    global.searchHistory = async function(query, options) {
+      // 动态取全局引擎：loading 页 init 成功后 global.searchEngine 指向已就绪实例；
+      // 避免 app.ux 作用域闭包实例与页面作用域实例不一致导致 isReady 恒为 false
+      var engine = global.searchEngine
+      if (!engine) return { results: [], total: 0 }
+      options = options || {}
+      var category = options.category !== undefined ? options.category : 'all'
+      var region = options.region !== undefined ? options.region : 'all'
+      var page = options.page || 1
+      var pageSize = options.pageSize || 20
+
+      try {
+        // ✅ 跨集聚合搜索（历史集 + 动态资料集，DatasetManager 统一编排）
+        var result = await searchAllAsync(query, {
+          category: category,
+          region: region,
+          page: page,
+          pageSize: pageSize,
+          datasetId: (options.datasetId !== undefined) ? options.datasetId : null,
+          // 大类入口搜索：只在 GROUP_MAP 该组的 datasets 范围内聚合（null = 不限）
+          groupId: (options.groupId !== undefined) ? options.groupId : null
+        })
+
+        // 防御性检查
+        if (!result || !result.results) {
+          return { results: [], total: 0 }
+        }
+
+        return {
+          results: result.results.map(function(item) {
+            var displayTitle = item.title
+            if (!displayTitle || displayTitle === '') {
+              displayTitle = item.yearDisplay + ' ' + (regionMap[item.region] || item.region)
+            }
+            return {
+              _id: item.globalId !== undefined ? item.globalId : item.id,
+              id: item.globalId !== undefined ? item.globalId : item.id,
+              datasetTag: item.datasetTag || '',
+              year: item.year,
+              yearDisplay: item.yearDisplay,
+              region: regionMap[item.region] || item.region,
+              regionTag: item.region,
+              category: item.category,
+              title: displayTitle,
+              keywords: [displayTitle],
+              cause: item.cause || '',
+              impact: item.impact || '',
+              // 卡片三行大小类（DatasetManager 按 meta.display.card 预拼完整类名，模板纯变量插值）
+              yearClass: item.yearClass || 'result-year',
+              titleClass: item.titleClass || 'result-title',
+              catClass: item.catClass || 'result-region'
+            }
+          }),
+          total: result.total || 0,
+          initFailed: result.initFailed || false
+        }
+      } catch(e) {
+        console.error('[searchHistory] 错误:', e)
+        return { results: [], total: 0 }
+      }
+    }
+
+    global.getItemById = async function(id) {
+      // 跨集路由：全局 ID = (datasetId << 20) | localId；历史集 datasetId=0 时数值上等于 localId
+      if (id >= 1048576) {
+        try {
+          var doc = await getItemByGlobalId(id)
+          if (doc) {
+            global.addRuntimeLog('[getItemById] 跨集取详情 gid=' + id + ' title=' + (doc.title || ''), 'info')
+            return doc
+          }
+        } catch (e) {
+          global.addRuntimeLog('[getItemById] 跨集失败 gid=' + id + ' ' + e.message, 'error')
+        }
+        return null
+      }
+      var engine = global.searchEngine
+      if (!engine) return null
+      var logs = []
+      logs.push('[global.getItemById] id=' + id)
+      try {
+        var result = await engine.getDoc(id)
+        if (result) {
+          logs.push('success, title=' + result.title)
+          global.addRuntimeLog(logs.join(' | '), 'success')
+        } else {
+          logs.push('result null')
+          global.addRuntimeLog(logs.join(' | '), 'warn')
+        }
+        return result
+      } catch(e) {
+        logs.push('error: ' + e.message)
+        global.addRuntimeLog(logs.join(' | '), 'error')
+        return null
+      }
+    }
+
+    global.getItemByIdSync = function(id) {
+      var engine = global.searchEngine
+      if (!engine) return null
+      var doc = engine.getDocSync(id)
+      if (!doc) return null
+      var displayTitle = doc.title
+      if (!displayTitle || displayTitle === '') {
+        displayTitle = doc.yearDisplay + ' ' + (regionMap[doc.region] || doc.region)
+      }
+      return {
+        _id: doc.id,
+        id: doc.id,
+        year: doc.year,
+        yearDisplay: doc.yearDisplay,
+        region: regionMap[doc.region] || doc.region,
+        regionTag: doc.region,
+        category: doc.category,
+        title: displayTitle,
+        keywords: null,
+        cause: null,
+        impact: null
+      }
+    }
+
+    global.historyData = null
+    global.searchEngine = engine
+  }
+
+  // 异步引擎初始化（带进度回调）
+  function startEngineLoad() {
+    if (engineInitialized) return
+    engineInitialized = true
+
+    var engine = engineInstance
+    var isQuickLaunch = global.quickLaunch || false
+    global.addRuntimeLog('开始引擎初始化（' + (isQuickLaunch ? '快速启动' : '完整加载') + '）', 'info')
+
+    var onDone = function(success) {
+      // 引擎就绪后再刷新一次，mapChunkSize / detailChunkSize 在 meta 加载后才准确
+      mountToGlobal()
+      if (success === true) {
+        global.addRuntimeLog('引擎初始化完成', 'success')
+      } else {
+        global.addRuntimeLog('引擎初始化失败', 'error')
+      }
+    }
+
+    if (isQuickLaunch) {
+      engine.initLight('/common/').then(onDone, onDone)
+    } else {
+      engine.init('/common/', function(percent, message) {
+        if (typeof global.addRuntimeLog === 'function') {
+          // 节流：只记录里程碑进度，避免刷屏
+          if (percent % 10 === 0 || percent === 100) {
+            global.addRuntimeLog('[引擎进度] ' + percent + '% ' + (message || ''), 'info')
+          }
+        }
+      }).then(onDone, onDone)
+    }
+  }
+
+  // ========== 防抖锁 ==========
+  export default {
+    isNavigating: false,
+
+    safeNavigate(fn) {
+      if (this.isNavigating) return
+      this.isNavigating = true
+      fn()
+      setTimeout(() => { this.isNavigating = false }, 300)
+    },
+
+    // ========== 全局初始化（onCreate 先于任何页面执行）==========
+    onCreate() {
+      global.appVersionName = APP_VERSION
+      // 资料集入口清单（index 页不再直接 import 库模块——webpack 双路径双实例坑）
+      // ⚠️ 两个清单各自独立 try：groupEntries 失败绝不能清空已成功的 datasetEntries
+      //（原先同一 try 内 getGroupEntries 抛错会走 catch 把 datasetEntries 重置为 []，
+      //  首页随即回退硬编码分类——资料入口「全部消失」的同源故障）
+      try {
+        global.datasetEntries = getDatasetEntries()
+      } catch (e) {
+        console.log('[APP-DS] datasetEntries 异常: ' + e.message)
+        global.datasetEntries = []
+      }
+      // 资料详情视图数据源（index 页不直接 import 库模块——webpack 双路径双实例坑）
+      global.getDatasetInfo = getDatasetInfo
+      try {
+        global.groupEntries = getGroupEntries()
+      } catch (e) {
+        console.log('[APP-DS] groupEntries 异常: ' + e.message)
+        global.groupEntries = []
+      }
+      console.log('[APP-DS] entries=' + (global.datasetEntries ? global.datasetEntries.length : 'null'))
+      global.addRuntimeLog('app.ux onCreate 应用创建', 'info')
+
+      // 1. 立即创建引擎并挂载全局接口
+      //    即使引擎尚未就绪，global.searchHistory / global.getItemById /
+      //    global.searchEngine 等也已定义，页面调用不会 undefined
+      engineInstance = getSearchEngine()
+      mountToGlobal()
+
+      // 2. 读取设置
+      //    ⚠️ 不再在此启动 startEngineLoad()：
+      //    loading 页（设置 → 加载数据）会单独调用 engine.init('/common/')，
+      //    若此处也并发 init，同一引擎单例的两个 readText 回调会互相覆盖，
+      //    导致 _loadMeta 的 Promise 永不 resolve、页面卡死在 5%。
+      //    完整加载统一由 loading.ux 单点触发（对应原 splash 的加载逻辑）。
+      loadSettingsAsync().then(function() {
+        loadQuotes()
+      })
+    }
+  }
+</script>

@@ -1,0 +1,69 @@
+{
+  "package": "vela.Databank",
+  "name": "资料库",
+  "versionName": "1.16.31",
+  "versionCode": 81,
+  "minPlatformVersion": 1000,
+  "icon": "/common/logo.png",
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+    {
+      "name": "system.vibrator"
+    },
+    {
+      "name": "system.file"
+    },
+    {
+      "name": "system.router"
+    },
+    {
+      "name": "system.prompt"
+    },
+    {
+      "name": "system.vibrator"
+    },
+    {
+      "name": "system.storage"
+    },
+    {
+      "name": "system.device"
+    },
+    {
+      "name": "system.interconnect"
+    }
+  ],
+  "config": {
+    "logLevel": "log",
+    "designWidth": 300,
+    "memoryLevel": "high",
+    "enable-custom-component": true
+  },
+  "router": {
+    "entry": "pages/index",
+    "pages": {
+      "pages/index": {
+        "component": "index"
+      },
+      "pages/result": {
+        "component": "result"
+      },
+      "pages/detail": {
+        "component": "detail"
+      },
+      "pages/favorites": {
+        "component": "favorites"
+      },
+      "pages/settings": {
+        "component": "settings"
+      },
+      "pages/confirm": {
+        "component": "confirm"
+      },
+      "pages/loading": {
+        "component": "loading"
+      }
+    }
+  }
+}

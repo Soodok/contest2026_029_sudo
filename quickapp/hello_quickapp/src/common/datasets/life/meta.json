@@ -1,0 +1,31 @@
+{
+  "datasetId": 4,
+  "name": "生活",
+  "version": 1,
+  "category": "生活",
+  "author": "sudo",
+  "totalCount": 1200,
+  "fields": {
+    "map": [
+      "title",
+      "year",
+      "category"
+    ],
+    "keyword": "keywords",
+    "detail": [
+      "原因/背景",
+      "影响/做法"
+    ],
+    "filter": [
+      "category"
+    ]
+  },
+  "mapChunkSize": 200,
+  "detailChunkSize": 100,
+  "blockCount": 1,
+  "bucketSize": 2048,
+  "yearIndex": false,
+  "icon": "icon.png",
+  "desc": "厨房烹饪、居家清洁、出行旅游、育儿养老等生活常识",
+  "tags": null
+}

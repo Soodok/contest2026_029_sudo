@@ -1,0 +1,100 @@
+600|initially,四级|adv. 最初，起初
+601|slightly,四级|adv. 轻微地
+602|objection,四级|n. 反对
+603|atmosphere,四级|n. 气氛；大气；空气
+604|assign,四级|v. 布置；分配
+605|evidence,四级|n. 根据，证据，迹象
+606|racially,四级|adv. 种族上地
+607|exclude,四级|v. 排除，不包括
+608|available,四级|adj. 可利用的，现有的；可获得的
+609|puzzling,四级|adj. 令人困惑的
+610|evaluation,四级|n. 评价，评估
+611|irritate,四级|v. 激怒
+612|distinguished,四级|adj. 显著的，杰出的
+613|depressing,四级|adj. 令人沮丧的
+614|mutually,四级|adv. 互相地
+615|mission,四级|n. 使命，任务；代表团
+616|migration,四级|n. 迁移，移民
+617|site,四级|n. 场所，地址
+618|expectation,四级|n. 期望
+619|update,四级|v. 更新；使现代化
+620|gear,四级|n. 齿轮 v. 使合适
+621|reproductive,四级|adj. 生殖的，再生的
+622|incredible,四级|adj. 不可思议的
+623|backward,四级|adv. 向后
+624|raise,四级|v. 提高；筹款；抚养
+625|prohibit,四级|v. 禁止，阻止，防止
+626|bother,四级|v. 麻烦；打扰
+627|pose,四级|v. 摆姿势，装腔作势 n. 姿势
+628|instrument,四级|n. 仪器，器械，工具
+629|mask,四级|v. 掩饰
+630|essential,四级|adj. 必须的；本质的
+631|harvest,四级|n. 丰收，收获
+632|reject,四级|v. 拒绝，驳回
+633|advancement,四级|n. 进步，提升
+634|skyrocket,四级|v. 突升，猛涨
+635|characteristic,四级|n. 特点
+636|implication,四级|n. 含义，暗示
+637|measure,四级|n. 分量 v. 测量
+638|replacement,四级|n. 代替
+639|easygoing,四级|adj. 脾气随和的，温和的
+640|squeeze,四级|v. 压，榨
+641|exhibition,四级|n. 展览
+642|responsibility,四级|n. 责任
+643|enhance,四级|v. 提高；加强；增加
+644|retain,四级|v. 保留,留用
+645|convey,四级|v. 传达，传递
+646|regulation,四级|n. 管理；规则
+647|integrity,四级|n. 完整
+648|combine,四级|v. 联合，结合
+649|impermanency,四级|n. 非永久性
+650|catalogue,四级|v. 把……编入目录
+651|council,四级|n. 议会
+652|prepare,四级|v. 做准备
+653|inquiry,四级|n. 询问
+654|tension,四级|n. 紧张
+655|prompt,四级|adj. 迅速的；立刻的；及时的 v. 促使；激励
+656|attendance,四级|n. 出席人数
+657|retail,四级|n. 零售 v. 零售
+658|image,四级|n. 形象，声誉，；印象
+659|quantity,四级|n. 量，数量
+660|inspector,四级|n. 检查员
+661|endurance,四级|n. 耐力
+662|simplify,四级|v. 简化
+663|range,四级|n. 范围 v. 在范围内变化
+664|accomplish,四级|v. 完成
+665|treatment,四级|n. 治疗；对待
+666|spare,四级|adj. 空闲的
+667|welfare,四级|n. 幸福；福利
+668|boost,四级|n. 推动 v. 促使，促进
+669|consciousness,四级|n. 意识
+670|patiently,四级|adv. 耐心地
+671|decent,四级|adj. 正派的，体面的
+672|review,四级|n. 回顾 v. 复习
+673|considerable,四级|adj. 相当大(或多)的
+674|misguide,四级|v. 误导
+675|foundation,四级|n. 地基；基础；；基金会
+676|postgraduate,四级|n. 研究生
+677|prevail,四级|v. 流行，盛行
+678|solid,四级|adj. 扎实的，坚实的
+679|counsel,四级|v. 忠告，建议
+680|maximum,四级|n. 最大值，最大量 a. 最大值的，最大量的
+681|abstract,四级|adj. 抽象的
+682|realistic,四级|adj. 现实的，实际的
+683|ban,四级|v. 禁止
+684|ashamed,四级|adj. 羞耻的；内疚的；惭愧的
+685|solve,四级|v. 解决
+686|reinforce,四级|v. 加强，强化
+687|applicant,四级|n. 申请人
+688|tuition,四级|n. 学费
+689|persistence,四级|n. 坚持不懈
+690|overcome,四级|v. 战胜，克服
+691|bride,四级|n. 新娘
+692|engagement,四级|n. 婚约
+693|household,四级|n. 家庭，一家人
+694|evaluate,四级|v. 评价
+695|saint,四级|n. 圣人
+696|delay,四级|v. 推迟，延期
+697|private,四级|adj. 私人的
+698|definition,四级|n. 定义
+699|influential,四级|adj. 有影响力的

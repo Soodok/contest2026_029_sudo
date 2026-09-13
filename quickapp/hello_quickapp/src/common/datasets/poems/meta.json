@@ -1,0 +1,31 @@
+{
+  "datasetId": 1,
+  "name": "诗词集",
+  "version": 1,
+  "category": "文化",
+  "author": "sudo",
+  "totalCount": 800,
+  "fields": {
+    "map": [
+      "title",
+      "year",
+      "dynasty"
+    ],
+    "keyword": "keywords",
+    "detail": [
+      "source",
+      "content"
+    ],
+    "filter": [
+      "dynasty"
+    ]
+  },
+  "mapChunkSize": 200,
+  "detailChunkSize": 100,
+  "blockCount": 1,
+  "bucketSize": 2048,
+  "yearIndex": false,
+  "icon": "icon.png",
+  "desc": "中国古诗词名篇，含朝代、作者与全文",
+  "tags": null
+}

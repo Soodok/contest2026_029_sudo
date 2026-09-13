@@ -1,0 +1,675 @@
+<template>
+  <div class="page-container">
+    <div class="page" @swipe="onSwipe">
+      <scroll class="detail-scroll" scroll-y="true">
+        <div class="top-spacer"></div>
+
+        <!-- 页头标题（对齐 favorites.ux header 结构） -->
+        <div class="header"><text class="header-title">详情</text></div>
+
+        <!-- 加载中 -->
+        <div class="header-card" if="{{loading}}">
+          <text class="loading-text">加载中...</text>
+        </div>
+
+        <!-- 条目标题（历史/资料集共用 detailTitle） -->
+        <div class="header-card" if="{{!loading && detailTitle}}">
+          <text class="detail-title">{{detailTitle}}</text>
+        </div>
+
+        <!-- 年份和地区 -->
+        <div class="header-card" if="{{!loading && yearDisplay}}">
+          <text class="detail-year">{{yearDisplay}}</text>
+          <text class="detail-region">{{displayRegion}}</text>
+        </div>
+
+        <!-- 关键词 -->
+        <div class="section-card" if="{{!loading && keywordList && keywordList.length > 0}}">
+          <text class="section-title">关键词</text>
+          <div class="keywords-row">
+            <div class="keyword-tag" for="{{keywordList}}">
+              <text class="keyword-text">{{$item}}</text>
+            </div>
+          </div>
+        </div>
+
+        <!-- 资料集动态详情字段（非历史集走这里，字段名/数量由集 meta 声明）
+             顺序：条目名 → 年份/地区 → 关键词 → 详情字段
+             （v1.16.14 按主人截图反馈修正：v1.16.11 曾把详情字段置顶，导致条目名被挤到最下、视觉散架） -->
+      <div class="ds-fields" if="{{detailFields && detailFields.length > 0}}">
+        <div class="section-card" for="{{detailFields}}">
+          <text class="section-title">{{$item.name}}</text>
+          <text class="section-content">{{$item.value}}</text>
+        </div>
+      </div>
+
+        <!-- 原因 -->
+        <div class="section-card" if="{{!loading && cause}}">
+          <text class="section-title">原因 / 背景</text>
+          <text class="section-content">{{cause}}</text>
+        </div>
+
+        <!-- 影响 -->
+        <div class="section-card" if="{{!loading && impact}}">
+          <text class="section-title">影响</text>
+          <text class="section-content">{{impact}}</text>
+        </div>
+
+
+      <!-- 收藏 -->
+        <div class="{{favBtnClass}}" @click="toggleFavorite">
+          <div class="{{favCircleClass}}"></div>
+          <text class="{{favTextClass}}">{{favText}}</text>
+        </div>
+
+      <!-- 返回按钮：内容流内，置于收藏下方（不再悬浮遮挡） -->
+      <div class="back-bar" @click="goBack">
+        <text class="back-text">返 回</text>
+      </div>
+
+
+        <!-- 错误 -->
+        <div class="header-card" if="{{errorMsg}}">
+          <text class="error-title">加载失败</text>
+          <text class="detail-region">{{errorMsg}}</text>
+        </div>
+
+        <div class="bottom-spacer"></div>
+      </scroll>
+
+    </div>
+  </div>
+</template>
+
+<style>
+  /* ===== 基础样式（矩形 rect，designWidth 300 基准；取值对齐 favorites.ux 深色体系） ===== */
+  .page-container { width: 100%; height: 100%; background-color: #000000; }
+  .page { width: 100%; height: 100%; flex-direction: column; align-items: center; }
+  .detail-scroll { width: 100%; height: 100%; flex-direction: column; align-items: center; padding: 0 20px; }
+
+  .top-spacer { width: 100%; height: 24px; flex-shrink: 0; }
+  .bottom-spacer { width: 100%; height: 80px; flex-shrink: 0; }
+
+  .header { width: 90%; height: 70px; justify-content: center; align-items: center; margin-bottom: 16px; flex-shrink: 0; }
+  .header-title { font-size: 28px; font-weight: bold; color: #FFFFFF; text-align: center; }
+
+  /* 卡片：深灰圆角（对齐 favorites.ux .fav-item / confirm.ux .info-card） */
+  .header-card { width: 100%; background-color: #1C1C1E; border-radius: 18px; padding: 14px 22px; margin-bottom: 12px; flex-direction: column; align-items: center; flex-shrink: 0; }
+
+  .detail-title { font-size: 30px; font-weight: bold; color: #FFFFFF; text-align: center; }
+
+  .detail-year { font-size: 36px; font-weight: bold; color: #4D9FEE; margin-bottom: 6px; text-align: center; }
+  .detail-region { font-size: 26px; color: #757575; text-align: center; }
+
+  .ds-fields { width: 100%; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .section-card { width: 100%; background-color: #1C1C1E; border-radius: 18px; padding: 18px 22px; margin-bottom: 12px; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .section-title { font-size: 26px; font-weight: bold; color: #4D9FEE; margin-bottom: 10px; }
+  .section-content { font-size: 24px; line-height: 36px; color: #FFFFFF; }
+
+  .keywords-row { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+  .keyword-tag { min-height: 44px; border-radius: 0px; background-color: #2C2C2E; border-width: 1px; border-color: #3A3A3C; border-style: solid; padding: 6px 14px; justify-content: center; align-items: center; margin-right: 6px; margin-bottom: 6px; flex-shrink: 0; }
+  .keyword-text { font-size: 20px; color: #FFFFFF; }
+
+  .loading-text { font-size: 26px; color: #757575; text-align: center; }
+  .error-title { font-size: 30px; font-weight: bold; color: #EA4335; margin-bottom: 6px; text-align: center; }
+
+  /* 与 header-card/section-card 风格统一：同宽 100%、同圆角 18px、内边距对齐 */
+  .favorite-btn { width: 100%; border-radius: 18px; padding: 18px 22px; margin-bottom: 12px; flex-direction: row; justify-content: center; align-items: center; }
+  /* 收藏态由类切换（替代原动态 style）：默认=未收藏灰系，-on 后缀=已收藏金底黑字 */
+  .fav-btn-off { background-color: #1C1C1E; border-style: solid; border-width: 2px; border-color: #3A3A3C; }
+  .fav-btn-on { background-color: #FFD700; border-style: solid; border-width: 0px; }
+  .fav-circle { width: 28px; height: 28px; border-radius: 14px; margin-right: 12px; background-color: #BBBBBB; }
+  .fav-circle-on { background-color: #000000; }
+  .fav-text { font-size: 26px; font-weight: 600; color: #BBBBBB; }
+  .fav-text-on { color: #000000; }
+
+  /* 返回胶囊：对齐 confirm.ux .btn-secondary（深灰胶囊） */
+  /* 与卡片同宽同圆角，风格统一（原 70%/33px 与 section-card 不一致；深灰次要色保留以区分主次）*/
+  .back-bar { width: 100%; height: 64px; border-radius: 18px; background-color: #2C2C2E; justify-content: center; align-items: center; margin-top: 12px; flex-shrink: 0; }
+  .back-text { font-size: 24px; font-weight: bold; color: #FFFFFF; }
+
+  /* ===== 圆屏 466：字号/卡片宽度/内边距按比例缩小（对齐 favorites.ux 圆屏） ===== */
+    /* ===== 胶囊 192x490：按比例放大（对齐 favorites.ux / confirm.ux 胶囊屏） ===== */
+  @media (shape: pill-shaped) {
+    .top-spacer { height: 30px; }
+    .header { height: 100px; margin-bottom: 20px; }
+    .header-title { font-size: 42px; }
+    .header-card { width: 90%; border-radius: 32px; padding: 24px 28px; margin-bottom: 14px; }
+    .detail-title { font-size: 40px; }
+    .detail-year { font-size: 44px; margin-bottom: 8px; }
+    .detail-region { font-size: 34px; }
+    .section-card { width: 90%; border-radius: 32px; padding: 24px 28px; margin-bottom: 14px; }
+    .section-title { font-size: 34px; margin-bottom: 14px; }
+    .section-content { font-size: 28px; line-height: 42px; }
+    .keyword-tag { min-height: 52px; border-radius: 26px; padding: 8px 20px; margin-right: 8px; margin-bottom: 8px; }
+    .keyword-text { font-size: 28px; }
+    .loading-text { font-size: 30px; }
+    .error-title { font-size: 42px; margin-bottom: 8px; }
+    /* 收藏卡与 section-card 完全对齐：原先无 pill 覆盖 → 落到基础值 86%/24px/12px，比同屏卡片小一整圈 */
+    .favorite-btn { width: 90%; border-radius: 32px; padding: 24px 28px; margin-bottom: 14px; }
+    .fav-circle { width: 36px; height: 36px; border-radius: 18px; margin-right: 16px; }
+    .fav-text { font-size: 34px; }
+    .back-bar { width: 90%; height: 112px; border-radius: 32px; margin-top: 14px; }
+    .back-text { font-size: 35px; }
+  }
+</style>
+
+<script>
+  import router from '@system.router'
+  import file from '@system.file'
+  import prompt from '@system.prompt'
+  import storage from '@system.storage'
+  import { getDetailByGlobalId } from '../../SearchEngine/DatasetDetail.js'
+
+  export default {
+    private: {
+      loading: true,
+      errorMsg: '',
+      yearDisplay: '',
+      region: '',
+      keywordList: [],
+      cause: '',
+      impact: '',
+      isFavorited: false,
+      detailFields: [],
+      eventId: null,
+      detailTitle: ''
+    },
+
+    computed: {
+      // 收藏按钮底色：已收藏=金色高亮底，未收藏=深灰底+2px 描边（返回样式字符串，避免内联复杂三元不生效）
+      // v1.16.18：收藏按钮由「动态 style 绑定」改为「状态类名」，模板只做纯变量插值。
+      // 原因：动态 style（尤其 favStyle 返回对象）会在每次渲染时重算并触发属性设置，
+      // 是滚动卡顿的元凶（也是交接块 #82 记的手环9 崩溃雷区：定稿方案为「@media 固化 + 状态类」）。
+      favBtnClass() {
+        return this.isFavorited ? 'favorite-btn fav-btn-on' : 'favorite-btn fav-btn-off'
+      },
+      favCircleClass() {
+        return this.isFavorited ? 'fav-circle fav-circle-on' : 'fav-circle'
+      },
+      favTextClass() {
+        return this.isFavorited ? 'fav-text fav-text-on' : 'fav-text'
+      },
+      favText() {
+        return this.isFavorited ? '已收藏' : '收藏'
+      },
+      displayRegion() {
+        var regionMap = {
+          'asia': '亚洲',
+          'europe': '欧洲',
+          'africa': '非洲',
+          'north_america': '北美洲',
+          'south_america': '南美洲',
+          'other': '其他'
+        }
+        return regionMap[this.region] || this.region || '未知'
+      }
+    },
+
+    // ============================================================
+    // 工具方法
+    // ============================================================
+    _formatYearDisplay(year) {
+      if (year < 0) return '约公元前' + Math.abs(year) + '年'
+      if (year > 0) return '公元' + year + '年'
+      return '公元元年'
+    },
+
+    // ============================================================
+    // 主逻辑
+    // ============================================================
+    onInit() {
+      var id = global.selectedEventId
+      this.eventId = id
+    },
+
+    // @system.file.readText 必须在 onShow 之后调用（onInit 时 DomPage 未 ready，回调丢失）——加载统一挂 onShow
+    onShow() {
+      if (this._loadStarted) return
+      this._loadStarted = true
+      this._loadDetail(this.eventId)
+    },
+
+    async _loadDetail(id) {
+  var self = this
+
+  if (typeof global.addRuntimeLog === 'function') {
+    global.addRuntimeLog('[detail] 打开 ID=' + id, 'info')
+  }
+
+  if (id === undefined || id === null) {
+    this.errorMsg = '事件ID无效'
+    this.loading = false
+    return
+  }
+
+  // ===== 资料集分支：全局 ID（datasetId<<20|localId）走资料集详情适配 =====
+  if (id >= 1048576) {
+    try {
+      var dsDetail = await getDetailByGlobalId(id)
+      if (dsDetail) {
+        this.detailTitle = dsDetail.title || '未知条目'
+        this.yearDisplay = dsDetail.yearDisplay || ''
+        this.region = dsDetail.region || ''
+        this.keywordList = dsDetail.keywords && dsDetail.keywords.length ? dsDetail.keywords.slice(0, 12) : [dsDetail.title]
+        this.detailFields = dsDetail.details
+        this.loading = false
+        this.checkFavoriteStatus(id)
+        if (typeof global.addRuntimeLog === 'function') {
+          global.addRuntimeLog('[detail] 资料集详情加载成功: ' + this.detailTitle, 'success')
+        }
+        return
+      }
+      this.errorMsg = '资料集中未找到该条目'
+      this.loading = false
+      return
+    } catch (e) {
+      this.errorMsg = '资料集详情加载失败: ' + e.message
+      this.loading = false
+      if (typeof global.addRuntimeLog === 'function') {
+        global.addRuntimeLog('[detail] 资料集加载异常: ' + e.message, 'error')
+      }
+      return
+    }
+  }
+
+  this.checkFavoriteStatus(id)
+
+  // ==========================================================
+  // 获取 Map 数据
+  // ==========================================================
+  var mapData = null
+
+  // 第一步：尝试从引擎获取（300ms 超时）
+  try {
+    var engineResult = await Promise.race([
+      global.getItemById(id),
+      new Promise(function(resolve) {
+        setTimeout(function() {
+          resolve(null)
+        }, 300)
+      })
+    ])
+    if (engineResult) {
+      mapData = engineResult
+      if (typeof global.addRuntimeLog === 'function') {
+        global.addRuntimeLog('[detail] 引擎获取 Map 成功（内存命中）', 'info')
+      }
+    }
+  } catch(e) {
+    if (typeof global.addRuntimeLog === 'function') {
+      global.addRuntimeLog('[detail] 引擎获取异常: ' + e.message, 'warn')
+    }
+  }
+
+  // 第二步：引擎超时或失败 → 从缓存加载 Map 到内存
+  if (!mapData) {
+    if (typeof global.addRuntimeLog === 'function') {
+      global.addRuntimeLog('[detail] 引擎未命中，尝试从缓存加载 Map', 'info')
+    }
+    var loaded = await this._loadMapFromCache(id)
+    if (loaded) {
+      // 缓存加载成功 → 再试一次引擎
+      try {
+        var result2 = await global.getItemById(id)
+        if (result2) {
+          mapData = result2
+          if (typeof global.addRuntimeLog === 'function') {
+            global.addRuntimeLog('[detail] 缓存加载后引擎获取成功', 'success')
+          }
+        }
+      } catch(e) {}
+    }
+  }
+
+  // 第三步：缓存也没有 → 直接读文件（兜底）
+  if (!mapData) {
+    if (typeof global.addRuntimeLog === 'function') {
+      global.addRuntimeLog('[detail] 缓存也没有，直接读 Map 文件', 'warn')
+    }
+    mapData = await this._readMapFileDirectly(id)
+    if (mapData) {
+      if (typeof global.addRuntimeLog === 'function') {
+        global.addRuntimeLog('[detail] 直接读 Map 文件成功', 'success')
+      }
+    }
+  }
+
+  if (!mapData) {
+    this.errorMsg = '未找到数据 (ID=' + id + ')'
+    this.loading = false
+    return
+  }
+
+  // 填充基础信息
+  this.yearDisplay = mapData.yearDisplay || '未知'
+  this.region = mapData.region || '未知'
+  this.detailTitle = mapData.title || '未知事件'
+  var fullKeywordList = [this.detailTitle]
+
+  // ==========================================================
+  // 读 detail 文件
+  // ==========================================================
+  var detailData = await this._readDetailFileDirectly(id)
+  if (detailData) {
+    if (detailData.restKeywords && detailData.restKeywords.length > 0) {
+      fullKeywordList = fullKeywordList.concat(detailData.restKeywords)
+    }
+    this.cause = detailData.cause || ''
+    this.impact = detailData.impact || ''
+  } else {
+    this.cause = ''
+    this.impact = ''
+  }
+
+  this.keywordList = fullKeywordList
+  this.loading = false
+
+  if (typeof global.addRuntimeLog === 'function') {
+    global.addRuntimeLog('[detail] 加载完成', 'info')
+  }
+},
+
+    // ============================================================
+    // 从 storage 缓存加载 Map 到内存
+    // ============================================================
+    _loadMapFromCache(id) {
+      var self = this
+      return new Promise(function(resolve) {
+        try {
+          var engine = global.searchEngine
+          if (!engine) {
+            resolve(false)
+            return
+          }
+
+          var mapChunkSize = global.mapChunkSize || 100
+          var mapId = Math.floor(id / mapChunkSize)
+
+          // 检查是否已经在内存中
+          if (engine.mapData && engine.mapData[mapId]) {
+            resolve(true)
+            return
+          }
+
+          // 从 storage 读取缓存
+          var storageModule = require('@system.storage')
+          var cacheKey = engine._getMapCacheKey ? engine._getMapCacheKey(mapId) : ('search_engine_map_v1_' + mapId)
+
+          storageModule.get({
+            key: cacheKey,
+            success: function(data) {
+              try {
+                var mapData = JSON.parse(data)
+                if (!engine.mapData) engine.mapData = {}
+                engine.mapData[mapId] = mapData
+                if (typeof global.addRuntimeLog === 'function') {
+                  global.addRuntimeLog('[detail] 从缓存加载 Map ' + mapId + ' 成功', 'success')
+                }
+                resolve(true)
+              } catch(e) {
+                resolve(false)
+              }
+            },
+            fail: function() {
+              resolve(false)
+            }
+          })
+        } catch(e) {
+          resolve(false)
+        }
+      })
+    },
+
+    // ============================================================
+    // 直接读 Map 文件（兜底）
+    // ============================================================
+    _readMapFileDirectly(id) {
+      var self = this
+      return new Promise(function(resolve) {
+        try {
+          var file = require('@system.file')
+          var mapChunkSize = global.mapChunkSize || 100
+          var chunkIndex = Math.floor(id / mapChunkSize)
+          var mapPath = '/common/map_' + chunkIndex + '.txt'
+
+          file.readText({
+            uri: mapPath,
+            success: function(data) {
+              try {
+                var lines = data.text.split('\n').filter(function(line) { return line.trim() })
+                for (var i = 0; i < lines.length; i++) {
+                  var parts = lines[i].split('|')
+                  if (parts.length < 4) continue
+                  var mapId = parseInt(parts[0], 10)
+                  if (mapId === id) {
+                    resolve({
+                      id: mapId,
+                      year: parseInt(parts[1], 10),
+                      yearDisplay: self._formatYearDisplay(parseInt(parts[1], 10)),
+                      regionId: parseInt(parts[2], 10),
+                      region: self._getRegionName(parseInt(parts[2], 10)),
+                      title: parts[3] || '未知事件'
+                    })
+                    return
+                  }
+                }
+                resolve(null)
+              } catch(e) {
+                resolve(null)
+              }
+            },
+            fail: function(err, code) {
+              resolve(null)
+            }
+          })
+        } catch(e) {
+          resolve(null)
+        }
+      })
+    },
+
+    // ============================================================
+    // 直接读 detail 文件
+    // ============================================================
+    _readDetailFileDirectly(id) {
+      return new Promise(function(resolve) {
+        try {
+          var file = require('@system.file')
+          var chunkSize = global.detailChunkSize || 100
+          var chunkIndex = Math.floor(id / chunkSize)
+          var offset = id % chunkSize
+          var uri = '/common/detail_' + chunkIndex + '.txt'
+
+          file.readText({
+            uri: uri,
+            success: function(data) {
+              try {
+                var lines = data.text.split('\n')
+                if (offset >= lines.length) {
+                  resolve(null)
+                  return
+                }
+                var parts = lines[offset].split('|')
+                if (parts.length < 4) {
+                  resolve(null)
+                  return
+                }
+                var restStr = parts[1] || ''
+                var restKeywords = restStr.split(',').filter(function(k) {
+                  return k && k.trim() !== ''
+                })
+                resolve({
+                  restKeywords: restKeywords,
+                  cause: parts[2] || '',
+                  impact: parts[3] || ''
+                })
+              } catch(e) {
+                resolve(null)
+              }
+            },
+            fail: function(err, code) {
+              resolve(null)
+            }
+          })
+        } catch(e) {
+          resolve(null)
+        }
+      })
+    },
+
+    // ============================================================
+    // 获取地区名称
+    // ============================================================
+    _getRegionName(regionId) {
+      var regionList = global.searchEngine ? global.searchEngine.getRegionList() : []
+      var regionMap = {
+        'asia': '亚洲',
+        'europe': '欧洲',
+        'africa': '非洲',
+        'north_america': '北美洲',
+        'south_america': '南美洲',
+        'other': '其他'
+      }
+      var tag = (regionList && regionList[regionId]) ? regionList[regionId] : '未知'
+      return regionMap[tag] || tag
+    },
+
+    // ============================================================
+    // 收藏功能
+    // ============================================================
+    checkFavoriteStatus(id) {
+      var self = this
+      storage.get({
+        key: 'favorite_list',
+        success: function(data) {
+          try {
+            var favorites = JSON.parse(data) || []
+            var found = false
+            for (var i = 0; i < favorites.length; i++) {
+              var item = favorites[i]
+              var itemId = (typeof item === 'number') ? item : (item.id || 0)
+              if (itemId === id) {
+                found = true
+                break
+              }
+            }
+            self.isFavorited = found
+          } catch(e) {
+            self.isFavorited = false
+          }
+        },
+        fail: function() {
+          self.isFavorited = false
+        }
+      })
+    },
+
+    toggleFavorite() {
+      var self = this
+
+      if (this.eventId === undefined || this.eventId === null) {
+        prompt.showToast({ message: '错误：事件ID无效', duration: 1000 })
+        return
+      }
+
+      var currentId = this.eventId
+      var wasFavorited = this.isFavorited
+
+      var favoriteItem = {
+        id: currentId,
+        yearDisplay: this.yearDisplay || '未知',
+        title: this.detailTitle || (this.keywordList && this.keywordList.length > 0 ? this.keywordList[0] : '未知事件'),
+        region: this.displayRegion || '未知'
+      }
+
+      storage.get({
+        key: 'favorite_list',
+        success: function(data) {
+          var favorites = []
+          try {
+            favorites = JSON.parse(data) || []
+          } catch(e) {
+            favorites = []
+          }
+
+          if (wasFavorited) {
+            var newFavorites = []
+            for (var i = 0; i < favorites.length; i++) {
+              var item = favorites[i]
+              var itemId = (typeof item === 'number') ? item : (item.id || 0)
+              if (itemId !== currentId) {
+                newFavorites.push(item)
+              }
+            }
+            storage.set({
+              key: 'favorite_list',
+              value: JSON.stringify(newFavorites),
+              success: function() {
+                self.isFavorited = false
+                prompt.showToast({ message: '已取消收藏', duration: 500 })
+                if (typeof global.addRuntimeLog === 'function') {
+                  global.addRuntimeLog('取消收藏成功: ID=' + currentId, 'info')
+                }
+              },
+              fail: function() {
+                prompt.showToast({ message: '取消收藏失败', duration: 500 })
+              }
+            })
+          } else {
+            var exists = false
+            for (var i = 0; i < favorites.length; i++) {
+              var item = favorites[i]
+              var itemId = (typeof item === 'number') ? item : (item.id || 0)
+              if (itemId === currentId) {
+                exists = true
+                break
+              }
+            }
+            if (!exists) {
+              // unshift：新收藏插到数组最前，列表天然最新在前
+              favorites.unshift(favoriteItem)
+            }
+            storage.set({
+              key: 'favorite_list',
+              value: JSON.stringify(favorites),
+              success: function() {
+                self.isFavorited = true
+                prompt.showToast({ message: '已添加收藏', duration: 500 })
+                if (typeof global.addRuntimeLog === 'function') {
+                  global.addRuntimeLog('添加收藏成功: ID=' + currentId, 'info')
+                }
+              },
+              fail: function() {
+                prompt.showToast({ message: '添加收藏失败', duration: 500 })
+              }
+            })
+          }
+        },
+        fail: function() {
+          if (!wasFavorited) {
+            var favorites = [favoriteItem]
+            storage.set({
+              key: 'favorite_list',
+              value: JSON.stringify(favorites),
+              success: function() {
+                self.isFavorited = true
+                prompt.showToast({ message: '已添加收藏', duration: 500 })
+              }
+            })
+          }
+        }
+      })
+    },
+
+    // ============================================================
+    // 返回
+    // ============================================================
+    onSwipe(eve) { if (eve.direction === 'right') { router.back() } },
+
+    goBack() {
+      if (this.$app.$def.isNavigating) return
+      router.back()
+    }
+  }
+</script>

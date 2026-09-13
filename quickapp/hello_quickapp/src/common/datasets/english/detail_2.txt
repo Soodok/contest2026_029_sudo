@@ -1,0 +1,100 @@
+200|appeal,四级|n. 呼吁 v. 吸引；呼吁；恳请，恳求
+201|careless,四级|adj. 粗心的
+202|hit,四级|n. (唱片、电影或戏剧的) 成功；命中，击中
+203|swallow,四级|v. 咽下，吞下
+204|consult,四级|v. 咨询
+205|preservation,四级|n. 保存，保留
+206|distance,四级|n. 距离
+207|plastic,四级|adj. 塑料的
+208|predict,四级|v. 预言，预测，预告
+209|submit,四级|v. 提交
+210|entertainment,四级|n. 娱乐
+211|critical,四级|adj. 批评的，爱挑剔的
+212|transaction,四级|n. 交易，业务，事务
+213|via,四级|prep. 通过
+214|insist,四级|v. 主张，坚持
+215|distract,四级|v. 分心
+216|subdivision,四级|n. 分支; 分部
+217|yield,四级|v. 产生，得出〔结果、答案或资料 n. 产量
+218|misunderstand,四级|v. 误解
+219|detail,四级|n. 细节
+220|immeasurable,四级|adj. 无法估量的
+221|convincing,四级|adj. 令人信服的
+222|donate,四级|v. 捐赠
+223|compare,四级|v. 比较，对照
+224|item,四级|n. 〔尤指清单上、一群或一组事物中的〕一项，一件，一条
+225|concrete,四级|adj. 具体的
+226|govern,四级|v. 管理，支配
+227|classify,四级|v. 把…分类，把…分级
+228|restrict,四级|v. 限制，限定
+229|establish,四级|v. 建立，创办，设立
+230|counseling,四级|n. 咨询服务
+231|majority,四级|n. 多数
+232|contact,四级|n. 联系，接触 v. 〔写信、打电话〕联系〔某人〕
+233|virtual,四级|adj. 虚拟的
+234|simplicity,四级|n. 简单
+235|enrollment,四级|n. 入学人数
+236|programming,四级|n. 〔计算机的〕程序编写，程序设计；程序；；〔电视或广播〕节目；电视[广播]节目策划，编排
+237|device,四级|n. 装置，设备
+238|previous,四级|adj. 之前的
+239|alter,四级|v. 改变
+240|coach,四级|n. 教练 v. 当…的教练，训练，培训
+241|crisis,四级|n. 危机
+242|interconnect,四级|v. 相互联系
+243|enrich,四级|v. 丰富；使富有
+244|poll,四级|n. 民意调查
+245|consent,四级|v. 允许，同意 n. 同意，赞同
+246|utility,四级|n. 公用事业〔如煤气、电力等〕
+247|poisonous,四级|adj. 有毒的，有害的
+248|collision,四级|n. 冲突，抵触
+249|rank,四级|v. 具有…等级[地位] n. 衔，阶层
+250|fundamentally,四级|adv. 根本上
+251|inflation,四级|n. 通货膨胀
+252|secure,四级|v. 确保……安全
+253|interpret,四级|v. 解释
+254|criticize,四级|v. 批评；评论
+255|arrest,四级|v. 逮捕
+256|afford,四级|v. 负担得起
+257|implementation,四级|n. 实现，履行
+258|initiate,四级|v. 开始，发起
+259|enable,四级|v. 使能够……
+260|narrow,四级|adj. 狭窄的
+261|overcharge,四级|v. 向……多收费
+262|shortcut,四级|n. 捷径，近路
+263|leisure,四级|n. 悠闲，空闲
+264|original,四级|adj. 原始的，最初的
+265|density,四级|n. 密度
+266|sphere,四级|n. 球体；范围
+267|margin,四级|n. 页边的空白，页边，白边
+268|department,四级|n. 部门
+269|desire,四级|n. 渴望，欲望
+270|legend,四级|n. 传奇
+271|dictator,四级|n. 独裁者；专制者
+272|diversity,四级|n. 多样性；差异
+273|quit,四级|v. 放弃
+274|outgoing,四级|adj. 开朗的；外向的；外出的
+275|solution,四级|n. 解决，解答，解决办法
+276|revenge,四级|n. 报仇
+277|reverse,四级|n. 相反情况；正相反 a. 相反的
+278|enroll,四级|v. 注册
+279|logically,四级|adv. 合乎情理地，符合逻辑地
+280|rental,四级|n. 租金
+281|component,四级|n. 成分
+282|quotation,四级|n. 引文
+283|faith,四级|n. 信任
+284|invalid,四级|adj. 无效的
+285|invade,四级|v. 侵入，侵略
+286|separately,四级|adv. 分别地，另行
+287|strain,四级|v. 扭伤，拉伤
+288|accessible,四级|adj. 易接近的
+289|lap,四级|n. 〔坐着时的〕大腿部
+290|character,四级|n. 角色
+291|widespread,四级|adj. 普遍的，广泛的
+292|rearrange,四级|v. 重新安排
+293|hospitalize,四级|v. 就医
+294|avail,四级|v. 有益, 有帮助
+295|instant,四级|adj. 立即的；紧急的；速溶的，方便的
+296|democratic,四级|adj. 民主的
+297|barely,四级|adv. 仅仅，几乎不
+298|vanish,四级|v. 消失
+299|caregiver,四级|n. 照料者

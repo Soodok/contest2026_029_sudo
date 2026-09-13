@@ -1,0 +1,100 @@
+500|sympathy,四级|n. 同情心
+501|discount,四级|n. 折扣
+502|value,四级|v. 重视
+503|altitude,四级|n. 海拔, 高度
+504|groundsheet,四级|n. 防潮布
+505|evolutionary,四级|adj. 进化的；演变的
+506|implement,四级|v. 实施，执行
+507|dominant,四级|adj. 占优势的
+508|scope,四级|n. 范围
+509|suspect,四级|v. 怀疑，猜想 n. 嫌疑犯
+510|confrontation,四级|n. 冲突，对抗
+511|puzzle,四级|v. 迷惑 n. 难解之事，谜
+512|critic,四级|n. 批评家，评论家
+513|apartment,四级|n. 公寓
+514|analyze,四级|v. 分析
+515|maintain,四级|v. 维持；主张
+516|curb,四级|v. 控制 n. 控制
+517|version,四级|n. 版本
+518|rival,四级|n. 对手
+519|beneficial,四级|adj. 有利的，有益的
+520|substantial,四级|adj. 大量的
+521|recover,四级|v. 恢复；重新获得；寻回
+522|diploma,四级|n. 文凭
+523|carpenter,四级|n. 木匠
+524|circumstance,四级|n. 环境，境遇
+525|canteen,四级|n. 食堂
+526|advocator,四级|n. 主张者，倡导者
+527|disorderly,四级|adj. 杂乱的
+528|essentially,四级|adv. 本质上，根本上
+529|prevent,四级|v. 预防
+530|ceremony,四级|n. 典礼，仪式
+531|assume,四级|v. 假定，认为
+532|demand,四级|n. 需求，要求 v. 要求
+533|principle,四级|n. 原则，原理
+534|reception,四级|n. 接待；反响
+535|transfer,四级|v. 转换，调换 n. 转换，调换
+536|preventable,四级|adj. 可预防的
+537|anticipate,四级|v. 预感
+538|assumption,四级|n. 假定，假设
+539|prescription,四级|n. 处方
+540|evolution,四级|n. 演变，进化
+541|annoy,四级|v. 使反感，厌烦
+542|unintended,四级|adj. 意想不到的
+543|origin,四级|n. 起源
+544|qualify,四级|v. 使……有资格
+545|emergence,四级|n. 出现，发生
+546|complain,四级|v. 抱怨
+547|merit,四级|n. 优点，成绩 v. 值得
+548|forum,四级|n. 论坛
+549|arrange,四级|v. 安排，筹划
+550|determination,四级|n. 意志
+551|bargain,四级|n. 便宜货，减价品
+552|appetite,四级|n. 欲望, 胃口
+553|neutral,四级|adj. 中立的
+554|primitive,四级|adj. 原始的；简单的；简单的，简陋的
+555|therapy,四级|n. 疗法 治疗
+556|conscience,四级|n. 良心
+557|define,四级|v. 确定；下定义
+558|creativity,四级|n. 创造力
+559|tailor,四级|v. 调整使适应
+560|dramatically,四级|adv. 戏剧性地，引人注目地
+561|panic,四级|n. 惊恐
+562|motivation,四级|n. 激励，刺激
+563|durable,四级|adj. 持久的，耐用的
+564|remedy,四级|n. 药物
+565|inevitable,四级|adj. 不可避免的
+566|diverse,四级|adj. 各种各样的
+567|context,四级|n. 背景，环境
+568|prominent,四级|adj. 杰出的；突出的，凸起的
+569|witness,四级|n. 目击者，目击
+570|save,四级|v. 节省
+571|inherit,四级|v. 继承
+572|occasion,四级|n. 场合
+573|initiative,四级|n. 主动权，自主权
+574|insight,四级|n. 洞察力，洞悉
+575|misguided,四级|adj. 被误导的
+576|sponsor,四级|v. 赞助
+577|porter,四级|n. 搬运工
+578|loyalty,四级|n. 忠诚，忠实
+579|overwhelming,四级|adj. 压倒性的
+580|appreciation,四级|n. 感激
+581|setting,四级|n. 背景，环境
+582|display,四级|n. 展览 v. 展览
+583|deliver,四级|v. 发表
+584|astonish,四级|v. 使惊讶，使大为吃惊
+585|adequate,四级|adj. 足够的
+586|consumption,四级|n. 消费，消耗
+587|abuse,四级|v. 虐待；滥用
+588|broad,四级|adj. 宽的
+589|inappropriate,四级|adj. 不合适的
+590|worldwide,四级|adv. 全世界范围地
+591|strict,四级|adj. 严格的
+592|means,四级|n. 方法
+593|reveal,四级|v. 揭露，揭示
+594|confirm,四级|v. 证实
+595|consensus,四级|n. 一致意见
+596|agent,四级|n. 代理商
+597|neighborhood,四级|n. 地区
+598|participate,四级|v. 参与，参加
+599|valid,四级|adj. 有效的

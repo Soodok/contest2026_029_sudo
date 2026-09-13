@@ -1,0 +1,100 @@
+300|harsh,四级|adj. 严酷的
+301|reliable,四级|adj. 可靠的，可信赖的
+302|massive,四级|adj. (尺寸、数量、规模) 非常大的
+303|alcohol,四级|n. 酒精
+304|pregnant,四级|adj. 怀孕的
+305|adapt,四级|v. 适应于
+306|bogus,四级|adj. 假冒的
+307|slippery,四级|adj. 滑的；模糊的，不明确的，
+308|current,四级|adj. 当前的
+309|overwhelm,四级|v. 压倒，战胜
+310|stressful,四级|adj. 充满著压力的，充满著紧张的
+311|toothache,四级|n. 牙痛，牙疼
+312|eliminate,四级|v. 消除
+313|terminal,四级|n. 终点站，航空站
+314|severe,四级|adj. 严重的
+315|immobile,四级|adj. 稳定的，不变的
+316|diplomatic,四级|adj. 外交的
+317|candidate,四级|n. 申请求职者；投考者；候选人
+318|fund,四级|n. 基金，储备； v. 提供资金
+319|complacency,四级|n. 自满，满足
+320|delight,四级|n. 高兴
+321|inadequate,四级|adj. 不足的，不够的
+322|steady,四级|adj. 稳定的，逐步的
+323|accurate,四级|adj. 精确的，准确的
+324|identification,四级|n. 身份证明；鉴定，识别；认同；
+325|previously,四级|adv. 事先
+326|identical,四级|adj. 相同的
+327|retirement,四级|n. 退休
+328|commit,四级|v. 犯罪；承担义务
+329|element,四级|n. 要素；元素
+330|assess,四级|v. 评价
+331|hire,四级|v. 雇佣
+332|represent,四级|v. 代表
+333|overestimate,四级|v. 对（数量）估计过高
+334|supervision,四级|n. 监督
+335|expose,四级|v. 暴露
+336|seemingly,四级|adv. 表面上看
+337|assignment,四级|n. 作业
+338|preference,四级|n. 偏爱
+339|energetic,四级|adj. 精力充沛的
+340|application,四级|n. 申请；应用
+341|moral,四级|adj. 精神上的, 道德的
+342|dispute,四级|n. 辩论，争论 v. 辩论，争论
+343|influence,四级|n. 影响 v. 影响
+344|illegal,四级|adj. 非法的
+345|esteem,四级|n. 自尊
+346|abundant,四级|adj. 大量的，丰富的
+347|survey,四级|v. 调查；审视，仔细考虑 n. 调查；勘测，测量，测绘
+348|extensively,四级|adv. 广泛地
+349|deserve,四级|v. 值得
+350|crash,四级|v. 坠落;坠毁;撞击 n. 〔汽车的〕撞车事故；〔飞机的〕坠毁，失事
+351|affirm,四级|v. 断言，声明
+352|reputation,四级|n. 名气，名声，名誉
+353|degree,四级|n. 程度
+354|fade,四级|v. 逐渐消失
+355|competitor,四级|n. 竞争者，对手
+356|confuse,四级|v. 使混淆，迷惑
+357|task,四级|n. 任务，工作
+358|lessen,四级|v. 减少
+359|admit,四级|v. 承认；容许
+360|bow,四级|v. 鞠躬
+361|division,四级|n. 除法；部门
+362|literature,四级|n. 文学，文学作品；文献；文献
+363|consultant,四级|n. 顾问
+364|penalty,四级|n. 惩罚
+365|comment,四级|n. 评论
+366|major,四级|adj. 主要的 v. 主修
+367|option,四级|n. 选择
+368|socialize,四级|v. 交往，联谊
+369|bureau,四级|n. 局
+370|budget,四级|n. 预算 v. 编预算
+371|pop,四级|v. 突然出现，跳出
+372|position,四级|n. 职位
+373|unaffordable,四级|adj. 买不起的，负担不起的
+374|function,四级|n. 功能 v. 运行
+375|perceive,四级|v. 察觉
+376|reserve,四级|v. 留出，预定
+377|innovation,四级|n. 改革，创新
+378|alert,四级|v. 提醒；使〔某人〕意识到 adj. 机警的
+379|cautious,四级|adj. 谨慎的
+380|document,四级|n. 文件
+381|characterize,四级|v. 以……特点
+382|achieve,四级|v. 完成，实现
+383|address,四级|v. 解决
+384|inspiration,四级|n. 灵感
+385|agency,四级|n. 机构
+386|formulate,四级|v. 规定，制定
+387|fate,四级|n. 命运
+388|surf,四级|v. 冲浪
+389|steer,四级|v. 驾驶
+390|structure,四级|n. 结构
+391|architect,四级|n. 建筑师
+392|frame,四级|n. 框架
+393|amaze,四级|v. 使吃惊
+394|affirmation,四级|n. 断言，肯定
+395|intelligent,四级|adj. 有智慧的，聪明的，悟性强的
+396|code,四级|n. 代码，密码
+397|burden,四级|n. 重担，负担
+398|absorb,四级|v. 吸收（液体、气体等）
+399|instruction,四级|n. 用法说明；操作指南；命令，指示

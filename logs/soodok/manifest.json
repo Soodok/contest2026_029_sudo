@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "team_id": "contest2026_029_sudo",
+  "github_login": "soodok",
+  "generator": "manual-export@1.0",
+  "updated_at": "2026-09-14T00:00:00.000Z",
+  "sessions": [
+    {
+      "session_id": "ses_011023123ffeFCNmz9rl65qaZx",
+      "tool": "opencode",
+      "started_at": "2026-08-11T04:04:03.156Z",
+      "last_event_at": "2026-08-11T04:04:03.156Z",
+      "event_count": 3,
+      "file_path": "logs/soodok/2026-08-11/opencode__ses_011023123ffeFCNmz9rl65qaZx.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    {
+      "session_id": "sess_529222c0-fc12-4932-b847-ed19e71b9bc5",
+      "tool": "zcode",
+      "started_at": "2026-08-29T02:57:39.000Z",
+      "last_event_at": "2026-09-05T12:30:12.000Z",
+      "event_count": 509,
+      "file_path": "logs/soodok/2026-08-29/zcode__sess_529222c0-fc12-4932-b847-ed19e71b9bc5.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "GLM-5.3-Flash"
+    },
+    {
+      "session_id": "sess_97678e10-c09e-4f36-87d7-6566485a28dc",
+      "tool": "zcode",
+      "started_at": "2026-08-29T02:57:39.000Z",
+      "last_event_at": "2026-09-13T01:42:29.000Z",
+      "event_count": 999,
+      "file_path": "logs/soodok/2026-08-29/zcode__sess_97678e10-c09e-4f36-87d7-6566485a28dc.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "GLM-5.3-Flash"
+    },
+    {
+      "session_id": "sess_ef73771e-6b1e-4c89-9815-e5110e1fd2f3",
+      "tool": "zcode",
+      "started_at": "2026-09-05T06:03:47.000Z",
+      "last_event_at": "2026-09-12T15:38:26.000Z",
+      "event_count": 828,
+      "file_path": "logs/soodok/2026-09-05/zcode__sess_ef73771e-6b1e-4c89-9815-e5110e1fd2f3.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "glm-5.3"
+    },
+    {
+      "session_id": "sess_9aa3070e-a032-4a76-b915-023647094ded",
+      "tool": "zcode",
+      "started_at": "2026-09-13T01:44:15.000Z",
+      "last_event_at": "2026-09-13T04:30:56.000Z",
+      "event_count": 367,
+      "file_path": "logs/soodok/2026-09-13/zcode__sess_9aa3070e-a032-4a76-b915-023647094ded.jsonl",
+      "collection_mode": "cli",
+      "health": "ok",
+      "model": "glm-5.3-flash"
+    }
+  ]
+}
