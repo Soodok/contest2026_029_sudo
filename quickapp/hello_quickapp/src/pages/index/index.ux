@@ -79,7 +79,7 @@
         <div class="voice-panel" if="{{voiceActive}}">
           <image class="voice-bt-off" src="/common/icons/bluetooth_off.png" if="{{!bluetoothConnected}}"></image>
           <text class="voice-tip" if="{{!bluetoothConnected}}">蓝牙未连接</text>
-          <text class="voice-tip" if="{{bluetoothConnected}}">聆听中</text>
+          <text class="voice-tip" if="{{bluetoothConnected}}">{{voiceStatusText}}</text>
           <image class="voice-anim" src="{{voiceWaveSrc}}" if="{{bluetoothConnected}}"></image>
           <div class="voice-cancel" @click="exitVoiceSearch">
             <text class="voice-cancel-text">取消</text>
@@ -90,7 +90,12 @@
              v1.16.11 修复「搜完结果不能下滑」：原先结果列表外包了一层内层 scroll，它处在外层
              scroll 的内容流里、高度被内容撑开且 flex-shrink:0 无法压缩 → 两层都滚不动。 -->
         <scroll class="home-result-scroll" scroll-y="true" onscrollbottom="onPageScrollBottom"><div class="home-result" if="{{searchActive}}">
-          <text class="result-count" if="{{searched && !showKeyboard && !loading}}">共 {{totalCount}} 条结果</text>
+          <!-- AI 回答卡（v1.16.33）：AI 搜索的问题回答；来源条目在其下方的结果列表 -->
+          <div class="ai-card" if="{{aiMode && (aiThinking || aiAnswer)}}">
+            <text class="ai-card-title">{{aiCardTitle}}</text>
+            <text class="ai-card-text">{{aiCardText}}</text>
+          </div>
+          <text class="result-count" if="{{searched && !showKeyboard && !loading && !aiMode}}">共 {{totalCount}} 条结果</text>
           <text class="engine-tip" if="{{showEngineTip}}" @click="goSettings">数据未就绪 · 点此去设置检查</text>
           <div class="result-item" for="{{visibleList}}" @click="gotoDetail($item.id)">
             <!-- 三行类名由 DatasetManager 按 meta.display.card 预拼完整类名（纯变量插值，禁拼接表达式） -->
@@ -266,6 +271,10 @@
   /* 结果列表（搜索结果随外层 pageScroll 流式滚动，无需内嵌 scroll） */
   .result-item { width: 94%; margin-left: 3%; border-radius: 14px; background-color: #1C1C1E; padding: 10px 14px; margin-bottom: 6px; flex-direction: column; flex-shrink: 0; }
   /* 「显示更多」按钮（v1.16.26）*/
+  /* AI 回答卡（v1.16.33）：区别于普通结果卡的强调样式 */
+  .ai-card { width: 94%; margin-left: 3%; border-radius: 14px; background-color: #1C2530; border: 1px solid #2A4A66; padding: 12px 14px; margin-bottom: 8px; flex-direction: column; flex-shrink: 0; }
+  .ai-card-title { font-size: 18px; color: #4D9FEE; font-weight: 600; margin-bottom: 6px; }
+  .ai-card-text { font-size: 18px; color: #E8E8E8; line-height: 26px; }
   .more-btn { width: 94%; margin-left: 3%; height: 64px; border-radius: 14px; background-color: #2C2C2E; justify-content: center; align-items: center; margin-top: 4px; margin-bottom: 8px; flex-shrink: 0; }
   .more-text { font-size: 22px; color: #4D9FEE; }
   .result-year { font-size: 20px; font-weight: bold; color: #4D9FEE; margin-bottom: 2px; }
@@ -344,6 +353,9 @@
     .ds-back { width: 44%; height: 84px; border-radius: 42px; }
     .ds-back-text { font-size: 32px; }
     .result-item { border-radius: 30px; padding: 26px 26px; margin-bottom: 18px; }
+    .ai-card { width: 94%; margin-left: 3%; border-radius: 30px; padding: 22px 26px; margin-bottom: 16px; }
+    .ai-card-title { font-size: 28px; margin-bottom: 10px; }
+    .ai-card-text { font-size: 28px; line-height: 40px; }
     .more-btn { border-radius: 30px; height: 100px; margin-bottom: 16px; }
     .more-text { font-size: 32px; }
     .result-year { font-size: 44px; }
@@ -361,6 +373,8 @@
 </style>
 
 <script>
+  // 语音搜索 / AI 搜索统一引擎（真链路=interconnect 手机 App；模拟链路=本地可运行模拟源）
+  import { getAssistant } from '../../SearchEngine/AssistantEngine.js'
   import router from '@system.router'
   import device from '@system.device'
   import prompt from '@system.prompt'
@@ -405,6 +419,11 @@
       visibleCount: 5,
       // 资料详情视图（v1.16.31，主人需求）：点大类/资料后替换分类行，展示图标+简介+标签
       dsViewActive: false,
+      // AI 搜索（v1.16.33）：aiMode=输入的问题将交给 AssistantEngine.answer 生成回答；
+      // aiThinking=等待回答；aiAnswer=回答文案（本地由检索结果真实拼出）
+      aiMode: false,
+      aiThinking: false,
+      aiAnswer: '',
       dsInfo: null,
       // 标签单独放顶层字段：模板 for 用嵌套属性（dsInfo.tags）不稳，且类名必须是纯变量插值
       dsTags: [],
@@ -484,6 +503,21 @@
       visibleList() {
         var n = this.visibleCount || 5
         return this.displayList.slice(0, n)
+      },
+      // 语音面板状态：真链路=「聆听中」，模拟链路=「聆听中（演示）」——识别链路真实运行
+      voiceStatusText() {
+        try {
+          var a = getAssistant()
+          return a.getMode() === 'real' ? '聆听中…' : '聆听中·演示'
+        } catch (e) { return '聆听中…' }
+      },
+      // AI 卡片文案（模板禁表达式，在此预拼）
+      aiCardTitle() {
+        return this.aiThinking ? 'AI 思考中…' : 'AI 回答'
+      },
+      aiCardText() {
+        if (this.aiThinking) return '正在检索本地资料并生成回答…'
+        return this.aiAnswer
       },
       moreText() {
         var rest = this.displayList.length - (this.visibleCount || 5)
@@ -652,14 +686,18 @@
     },
 
     goSearch() {
-      // 通用搜索入口：清掉资料集限定，否则上次进过某资料集后所有搜索仍只搜该集
+      // AI 搜索（v1.16.33）：清掉资料集限定 → 进入 AI 提问模式（键盘输入问题，
+      // 收起键盘后由 AssistantEngine 生成本地回答 + 来源列表；真机连手机时走云端应答）
       this.activeDatasetId = null
       this.activeGroupId = null
       this._resetSearchFilters()
+      this.aiMode = true
       this.enterSearch()
     },
 
-    // 语音搜索：点击进入语音聆听态，检查蓝牙连接
+    // 语音搜索（v1.16.33）：进入聆听态 → AssistantEngine.recognize ——
+    // 真链路=interconnect 发到手机 App 做 ASR 后回传文本；模拟链路=本地演示词源。
+    // 两条链路共用此回调：识别文本真实填入搜索框并触发本地搜索（整条链路真实执行）。
     startVoiceSearch() {
       if (this.$app.$def.isNavigating) return
       if (this.voiceActive) return
@@ -673,15 +711,32 @@
           self.voiceLevel = Math.floor(Math.random() * 6)
         }
       }, 300)
+      getAssistant().recognize(function (r) {
+        if (self.isDestroyed || !self.voiceActive) return
+        if (r && r.ok && r.text) {
+          self.log('[HOME-SEARCH] 语音识别（' + r.mode + '）：' + r.text)
+          // 识别成功：退出聆听态 → 填词 → 走真实搜索
+          self.exitVoiceSearch()
+          self.activeDatasetId = null
+          self.activeGroupId = null
+          self._resetSearchFilters()
+          self.aiMode = false
+          self.enterSearch()
+          self.searchQuery = r.text
+          global.searchQuery = r.text
+          self.loadPage(1, true)
+        }
+      })
     },
 
-    // 退出语音聆听态
+    // 退出语音聆听态（同时取消在途的识别请求）
     exitVoiceSearch() {
       this.voiceActive = false
       if (this.voiceTimer) {
         clearInterval(this.voiceTimer)
         this.voiceTimer = null
       }
+      getAssistant().cancel()
       this.log('[HOME-SEARCH] 语音搜索结束')
     },
 
@@ -878,6 +933,9 @@
       this.activeDatasetId = null
       this.activeGroupId = null
       this._resetSearchFilters()
+      this.aiMode = false
+      this.aiThinking = false
+      this.aiAnswer = ''
       this.searchTitle = '搜索'
       this.searchSeq++
       this.loading = false
@@ -911,7 +969,56 @@
     finishInput() {
       this.showKeyboard = false
       this.log('[HOME-SEARCH] 键盘关')
+      if (this.aiMode) {
+        this.runAiSearch()
+        return
+      }
       this.resetAndSearch()
+    },
+
+    // AI 搜索执行：问题交给 AssistantEngine（真链路=手机云端应答；模拟=本地理解+检索+摘要）
+    runAiSearch() {
+      var self = this
+      var q = (this.searchQuery || '').trim()
+      if (!q) { this.aiMode = false; this.resetAndSearch(); return }
+      this.aiThinking = true
+      this.aiAnswer = ''
+      this.log('[HOME-SEARCH] AI 搜索：' + q + '（链路=' + getAssistant().getMode() + '）')
+      var searchFn = function (kw) {
+        // 复用既有搜索通道（走 global.searchHistory → searchAllAsync → 六集引擎）
+        return Promise.resolve().then(function () {
+          return global.searchHistory(kw, { page: 1, pageSize: 5, category: 'all', region: 'all' })
+        })
+      }
+      getAssistant().answer(q, searchFn, function (r) {
+        if (self.isDestroyed) return
+        self.aiThinking = false
+        if (r && r.ok) {
+          self.aiAnswer = r.answer
+          // AI 回答附带的来源条目直接进入结果列表（点击可看详情，与普通结果一致）
+          var items = r.results || []
+          var formatted = items.map(function (item) {
+            return {
+              id: item.id || item._id,
+              yearDisplay: item.yearDisplay || (r.keyword || ''),
+              title: (item.title || '').split(/[，,]/)[0],
+              region: item.region || 'AI 来源',
+              yearClass: item.yearClass || 'result-year',
+              titleClass: item.titleClass || 'result-title',
+              catClass: item.catClass || 'result-region'
+            }
+          })
+          self.displayList = formatted
+          self.visibleCount = 5
+          self.totalCount = r.total || formatted.length
+          self.searched = true
+          self.allLoaded = true
+          self.log('[HOME-SEARCH] AI 回答就绪：' + r.answer)
+        } else {
+          self.aiAnswer = 'AI 搜索暂不可用，请稍后再试。'
+          self.searched = true
+        }
+      })
     },
 
 
