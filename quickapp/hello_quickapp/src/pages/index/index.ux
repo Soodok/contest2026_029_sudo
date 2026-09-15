@@ -655,6 +655,7 @@
       // 通用搜索入口：清掉资料集限定，否则上次进过某资料集后所有搜索仍只搜该集
       this.activeDatasetId = null
       this.activeGroupId = null
+      this._resetSearchFilters()
       this.enterSearch()
     },
 
@@ -766,6 +767,14 @@
       this.enterSearch(item)
     },
 
+    // 复位全部筛选条件（标签/分类/地区）——否则「点标签筛选 → 退出搜索」会把限定
+    // 带到下一次普通搜索，其他 5 个集全部为空，用户会以为搜索坏了。
+    _resetSearchFilters() {
+      this.activeRegion = 'all'
+      this.activeTag = null
+      this.activeCategory = 'all'
+    },
+
     goSettings() {
       if (this.$app.$def.isNavigating) return
       router.push({ uri: '/pages/settings' })
@@ -868,6 +877,7 @@
       // 资料集限定一并清掉：退出诗词集后再普通搜索，不应仍只搜诗词集
       this.activeDatasetId = null
       this.activeGroupId = null
+      this._resetSearchFilters()
       this.searchTitle = '搜索'
       this.searchSeq++
       this.loading = false

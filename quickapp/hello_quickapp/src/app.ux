@@ -2,7 +2,7 @@
   // ========== 搜索引擎（全局引擎初始化，从原 splash.ux 提取到 app 生命周期）==========
   import { getSearchEngine } from './SearchEngine/SearchEngine.js'
   // 应用版本（与 src/manifest.json 的 versionName 保持同步——改版本时两处一起改）
-  const APP_VERSION = '1.16.31'
+  const APP_VERSION = '1.16.32'
   import { searchAllAsync, getItemByGlobalId, getDatasetEntries, getGroupEntries, getDatasetInfo } from './SearchEngine/DatasetManager.js'
 
   // ========== 日志系统（直接操作 storage）==========
@@ -56,6 +56,7 @@
   }
 
   // 添加日志
+  var logSaveTimer = null
   global.addRuntimeLog = function(msg, level) {
     var now = new Date()
     var time = pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds())
@@ -70,11 +71,15 @@
       logQueue.pop()
     }
 
-    // 立即保存
-    saveLogsToStorage()
-
-    // 控制台输出
-    console.log('[' + (level || 'info').toUpperCase() + '] ' + msg)
+    // ⚠️ 合并写入（v1.16.32 性能修复）：原先每条日志都立即 storage.set，
+    // 而引擎在搜索过程中会密集打日志 → 造成大量块设备 I/O（手环上体感为卡顿）。
+    // 改为 2 秒窗口内合并一次写入；页面退出时由 flushLogsNow 兜底。
+    if (!logSaveTimer) {
+      logSaveTimer = setTimeout(function() {
+        logSaveTimer = null
+        saveLogsToStorage()
+      }, 2000)
+    }
   }
 
   // 获取所有日志
@@ -192,6 +197,10 @@
   }
 
   // 挂载全局接口（幂等，可在引擎就绪前后多次调用）
+  // 引擎就绪后刷新全局量（mapChunkSize / detailChunkSize 在 meta 加载后才准确）。
+  // 页面（loading）在 init 成功 / 懒初始化完成后调用它。
+  global.refreshEngineGlobals = function() { mountToGlobal() }
+
   function mountToGlobal() {
     var engine = engineInstance
     if (!engine) return
@@ -336,38 +345,6 @@
     global.searchEngine = engine
   }
 
-  // 异步引擎初始化（带进度回调）
-  function startEngineLoad() {
-    if (engineInitialized) return
-    engineInitialized = true
-
-    var engine = engineInstance
-    var isQuickLaunch = global.quickLaunch || false
-    global.addRuntimeLog('开始引擎初始化（' + (isQuickLaunch ? '快速启动' : '完整加载') + '）', 'info')
-
-    var onDone = function(success) {
-      // 引擎就绪后再刷新一次，mapChunkSize / detailChunkSize 在 meta 加载后才准确
-      mountToGlobal()
-      if (success === true) {
-        global.addRuntimeLog('引擎初始化完成', 'success')
-      } else {
-        global.addRuntimeLog('引擎初始化失败', 'error')
-      }
-    }
-
-    if (isQuickLaunch) {
-      engine.initLight('/common/').then(onDone, onDone)
-    } else {
-      engine.init('/common/', function(percent, message) {
-        if (typeof global.addRuntimeLog === 'function') {
-          // 节流：只记录里程碑进度，避免刷屏
-          if (percent % 10 === 0 || percent === 100) {
-            global.addRuntimeLog('[引擎进度] ' + percent + '% ' + (message || ''), 'info')
-          }
-        }
-      }).then(onDone, onDone)
-    }
-  }
 
   // ========== 防抖锁 ==========
   export default {

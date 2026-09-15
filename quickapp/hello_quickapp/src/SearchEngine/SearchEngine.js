@@ -92,6 +92,10 @@ var C = {
 
 // ========== 日志工具 ==========
 function _log(msg, level, ctx) {
+  // ⚠️ 生产（debug:false）直接返回：引擎内部每一步都会打日志，而 app.ux 的
+  // addRuntimeLog 每次都会 storage.set —— 一次跨集搜索可产生数十次块设备写入，
+  // 这是手环上「搜索卡顿」的主要来源之一。排查问题时可临时把 config.debug 改回 true。
+  if (!C.debug) return
   level = level || 'info'
   try {
     if (typeof global !== 'undefined' && global.addRuntimeLog) {
@@ -964,6 +968,21 @@ async _checkAllMapsCache() {
     return saved
   }
   
+  // 全量构建块（init 的 Step 5 兜底路径）。此前该方法【只有调用、没有定义】，
+  // 一旦走到该分支就抛 TypeError 并被 catch 吞掉 → 表现为「数据加载失败」。
+  async _buildAllChunks(progressCallback) {
+    var total = this.chunks.length
+    _logInfo('开始构建 ' + total + ' 个块', 'build')
+    for (var i = 0; i < total; i++) {
+      var ok = await this._buildAndCacheChunk(i, progressCallback)
+      if (!ok) {
+        _logError('块 ' + i + ' 构建失败', 'build')
+        return false
+      }
+    }
+    return true
+  }
+
   async _loadAllChunksFromCache(progressCallback) {
     var totalChunks = this.chunks.length
     _logInfo('开始检查 ' + totalChunks + ' 个块缓存', 'cache')

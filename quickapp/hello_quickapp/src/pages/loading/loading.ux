@@ -119,6 +119,11 @@
           // 将已就绪引擎挂到全局：app.ux 挂载的是 app 作用域实例，与页面作用域
           // 的模块实例可能不同（isReady 不同步），此处统一覆盖为已 init 的实例
           global.searchEngine = engine
+          // ⚠️ 引擎就绪后刷新全局 chunkSize：app.ux 的 mountToGlobal 在 onCreate 执行，
+          // 那时 meta 尚未读取，mapChunkSize/detailChunkSize 会停在默认值 100；
+          // 而历史集真实值是 mapChunkSize=600 / detailChunkSize=150 —— 不刷新会导致
+          // 详情页按错误分片取数（读到别的条目或报「未找到数据」）。
+          if (typeof global.refreshEngineGlobals === 'function') global.refreshEngineGlobals()
           self.onSuccess()
         } else {
           self.onError('数据加载失败，请重试')

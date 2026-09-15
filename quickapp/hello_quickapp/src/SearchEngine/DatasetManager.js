@@ -251,6 +251,16 @@ async function clearAllCaches() {
       console.log('[DM] 清缓存失败 ds=' + ds.id + ': ' + e.message)
     }
   }
+  // ⚠️ 额外清理 app.ux 自建引擎实例：其缓存键不含 _ds 后缀（search_engine_v6_chunk_N），
+  // 与资料集实例的键不同；不单独清的话历史集（/common）的缓存永远清不掉。
+  try {
+    var appEng = (typeof global !== 'undefined') ? global.searchEngine : null
+    if (appEng && typeof appEng.clearChunkCache === 'function') {
+      await appEng.clearChunkCache()
+      await appEng.clearMapCache()
+    }
+  } catch (e) { console.log('[DM] 清理 app 引擎缓存失败: ' + e.message) }
+
   // 丢弃内存引擎池：下次搜索/加载按当前数据文件重建缓存
   engines = {}
   console.log('[DM] clearAllCaches: 已清理 ' + ok + '/' + DATASETS.length + ' 个数据集，共 ' + keys + ' 个键位')

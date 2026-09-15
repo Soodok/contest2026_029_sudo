@@ -383,7 +383,8 @@
             return
           }
 
-          var mapChunkSize = global.mapChunkSize || 100
+          // ⚠️ 优先用引擎实例的真值（meta 加载后才有），global 只是兜底
+          var mapChunkSize = (global.searchEngine && global.searchEngine.mapChunkSize) || global.mapChunkSize || 600
           var mapId = Math.floor(id / mapChunkSize)
 
           // 检查是否已经在内存中
@@ -429,7 +430,8 @@
       return new Promise(function(resolve) {
         try {
           var file = require('@system.file')
-          var mapChunkSize = global.mapChunkSize || 100
+          // ⚠️ 优先用引擎实例的真值（meta 加载后才有），global 只是兜底
+          var mapChunkSize = (global.searchEngine && global.searchEngine.mapChunkSize) || global.mapChunkSize || 600
           var chunkIndex = Math.floor(id / mapChunkSize)
           var mapPath = '/common/map_' + chunkIndex + '.txt'
 
@@ -476,7 +478,8 @@
       return new Promise(function(resolve) {
         try {
           var file = require('@system.file')
-          var chunkSize = global.detailChunkSize || 100
+          // ⚠️ 同上：历史集真实 detailChunkSize=150，恒用 100 会读到别的条目
+          var chunkSize = (global.searchEngine && global.searchEngine.detailChunkSize) || global.detailChunkSize || 150
           var chunkIndex = Math.floor(id / chunkSize)
           var offset = id % chunkSize
           var uri = '/common/detail_' + chunkIndex + '.txt'
