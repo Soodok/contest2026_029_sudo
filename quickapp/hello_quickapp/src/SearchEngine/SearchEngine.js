@@ -1357,7 +1357,9 @@ async _checkAllMapsCache() {
           
           var pass = true
           if (region !== 'all' && this.regionList[info.regionId] !== region) pass = false
-          if (category !== 'all') {
+          // ⚠️ category 筛选依赖 loadDetail（当前为空实现恒 undefined → 恒 pass=false），
+          // 且资料集 categoryList 为空；categoryList 非空（历史集）才启用该过滤
+          if (category !== 'all' && this.categoryList.length > 0) {
             var detail = await this.loadDetail(id)
             if (!detail || this.categoryList[detail.categoryId] !== category) pass = false
           }
@@ -1530,7 +1532,6 @@ async _checkAllMapsCache() {
   getCategoryList() { return this.categoryList }
   getConfig() { return this.config }
   getVersion() { return this.config.version }
-  isReady() { return this.isReady }
   getMapChunkSize() {
     return this.mapChunkSize
   }

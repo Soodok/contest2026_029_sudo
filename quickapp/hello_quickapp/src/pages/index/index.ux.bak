@@ -5,6 +5,7 @@
     <!-- 整页纵向滚动：两块各占一屏，滑动停止后自动吸附（类似番茄钟分页）；每屏自带状态栏；搜索态结果随其滚动 -->
     <scroll id="pageScroll" class="page-scroll" scroll-y="{{!voiceActive}}" onscroll="onPageScroll" onscrollbottom="onPageScrollBottom">
       <!-- 第一块：状态栏 + 搜索框（常驻顶部）+ 下方内容在搜索态被结果区替换（if 不占位） -->
+      <!-- 搜索态高度用显式 resultScreenH：轻量运行时不支持内联 height:auto，会让 screen1 塌缩、结果卡片被 scroll 裁掉 -->
       <div class="screen1">
         <!-- 状态栏时间 + 应用名（每屏独立渲染，随内容滚动）；搜索态标题切换为 searchTitle -->
         <div class="statusbar">
@@ -1169,6 +1170,13 @@
         this.totalCount = result.total || 0
         this.currentPage = page
         this.loading = false
+          // 重算搜索态 screen1 显式高度：顶部(状态栏+搜索框+计数 ≈130) + 每条卡片 88 + 底部余量，最小一屏
+        // 高度上界（v1.16.25）：原式随结果数线性增长（100 条 = 8800px 滚动内容），
+        // 外层 scroll 内容越高、滚动与重排越慢。限制在 3 屏内。
+        this.resultScreenH = Math.min(
+          Math.max(this.screen1H || 429, 130 + this.displayList.length * 88 + 60),
+          (this.screen1H || 429) * 3
+        )
         if (formatted.length < this.pageSize) {
           this.allLoaded = true
         }
