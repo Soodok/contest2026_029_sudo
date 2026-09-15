@@ -270,18 +270,6 @@
       "model": "glm-5-3-flash"
     },
     {
-      "session_id": "9b18288f-49a8-4c28-8b52-7c771a0bfdd2",
-      "tool": "claude-code",
-      "started_at": "2026-09-12T05:41:24.288Z",
-      "last_event_at": "2026-09-12T05:51:59.576Z",
-      "event_count": 169,
-      "raw_event_count": 251,
-      "file_path": "logs/soodok/2026-09-12/claude-code__9b18288f-49a8-4c28-8b52-7c771a0bfdd2.jsonl",
-      "collection_mode": "cli",
-      "health": "ok",
-      "model": "glm-5-3-flash"
-    },
-    {
       "session_id": "5b55a055-ee32-4696-8fa2-8ccc6ea183d7",
       "tool": "claude-code",
       "started_at": "2026-09-12T05:58:20.985Z",
