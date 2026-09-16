@@ -888,6 +888,20 @@
       }
     },
 
+    // ===== 布局切换节流（v1.16.39，渲染竞态防护）=====
+    // 搜索态进/出会同时翻转 ds-view、结果区、按钮行、第二屏等多个条件节点；
+    // 主人实测快速连点下轻量运行时有概率 DOM 重排错乱（返回资料视图时按钮行弹到
+    // 顶部、资料介绍塌到下方、返回键消失）。切换后 300ms 内的再次触发直接忽略。
+    _layoutGuard(where) {
+      var now = Date.now()
+      if (this._lastLayoutAt && now - this._lastLayoutAt < 300) {
+        this.log('[HOME-SEARCH] 布局节流(' + (now - this._lastLayoutAt) + 'ms) 忽略: ' + where, 'warn')
+        return true
+      }
+      this._lastLayoutAt = now
+      return false
+    },
+
     // ===== 搜索态布局切换（v1.16.37）=====
     // screen1 高度：非搜索态=整屏（与第二屏双屏吸附）；搜索态=头部高（状态栏+搜索框），
     // 让结果区（pageScroll 直接子项）紧跟头部，随内容自然撑高、单层滚动。
@@ -899,6 +913,8 @@
       return 104
     },
     _applySearchLayout(searching) {
+      // 翻转即记录时间：节流窗口覆盖全部布局变更源（含 clearSearch/onDelete 等未接 guard 的入口）
+      this._lastLayoutAt = Date.now()
       var full = this._fullScreenH || 429
       this.screen1H = searching ? this._searchHeaderH() : full
     },
@@ -906,6 +922,7 @@
     // 进入搜索：搜索框/搜索按钮只弹键盘（分类行保留、被键盘盖住，无内容替换切换感）；
     // 分类图标进入则清空词并显示结果区；统一延迟 150ms 弹键盘（先让组件 mount）
     enterSearch(category) {
+      if (this._layoutGuard('enterSearch')) return
       if (category) {
         global.searchCategory = category
         this.activeCategory = category
@@ -966,6 +983,7 @@
     // 退出搜索：清空搜索状态回主页（下次点击重新开始）；回滚到顶部。
     // 从资料视图进入的搜索：退出后回到该资料视图（保留集限定与标题），不回顶层分类行
     exitSearch() {
+      if (this._layoutGuard('exitSearch')) return
       this.searchActive = false
       this._applySearchLayout(false)
       this.showKeyboard = false
@@ -1242,6 +1260,7 @@
     // ===== 资料详情视图（v1.16.31）=====
     // 进入某资料的详情视图：设置当前集 + 预拼标签选中态（模板只做纯变量插值）
     enterDatasetView(info) {
+      if (this._layoutGuard('enterDatasetView')) return
       var tags = []
       for (var i = 0; i < info.tags.length; i++) {
         tags.push({ label: info.tags[i].label, value: info.tags[i].value, cls: 'ds-tag' })
@@ -1289,6 +1308,7 @@
 
     // 退出资料视图，回到分类横滑行
     exitDsView() {
+      if (this._layoutGuard('exitDsView')) return
       this.dsViewActive = false
       this.dsInfo = null
       this.activeTag = null
