@@ -511,11 +511,11 @@
         var n = this.visibleCount || 5
         return this.displayList.slice(0, n)
       },
-      // 顶部标题合成（v1.16.37）：搜索态标题标注来源——资料视图内搜索显示「集名·搜索」，
-      // 非搜索态在资料视图显示集名，其余显示应用名
+      // 顶部标题合成（v1.16.37）：搜索态标题标注来源——资料视图内搜索显示「集名搜索」
+      // （v1.16.40 主人要求去掉间隔点），非搜索态在资料视图显示集名，其余显示应用名
       headerTitle() {
         if (this.dsViewActive && this.dsInfo) {
-          return this.searchActive ? (this.dsInfo.name + '·搜索') : this.dsInfo.name
+          return this.searchActive ? (this.dsInfo.name + '搜索') : this.dsInfo.name
         }
         return this.searchActive ? this.baseTitle : '资料库'
       },
@@ -1084,7 +1084,9 @@
     },
 
 
-    // 清空关键词（清空时保持键盘打开状态，可继续输入；恢复分类行）
+    // 清空关键词（清空时保持键盘打开状态，可继续输入）；
+    // v1.16.40：清词后【保持搜索态】（搜索空态引导），不再回分类行——✕ 连点/清词不再触发
+    // 多节点翻转（防塌陷），退出搜索统一走右滑
     clearSearch() {
       this.isClearing = true
       this.searchQuery = ''
@@ -1098,8 +1100,6 @@
       this.currentPage = 1
       this.allLoaded = false
       this.searched = false
-      this.searchActive = false
-      this._applySearchLayout(false)
       var self = this
       setTimeout(function() { self.isClearing = false }, 200)
     },
@@ -1117,14 +1117,11 @@
       }
     },
 
-    // @delete：键盘内部缓冲已空时，删除页面关键词末字符；删空恢复分类行
+    // @delete：键盘内部缓冲已空时，删除页面关键词末字符；删空【保持搜索态】
+    //（v1.16.40 防塌陷：搜索空态显示引导词，退出只走右滑——避免删空瞬间的多节点翻转）
     onDelete() {
       this.searchQuery = this.searchQuery.slice(0, -1)
       global.searchQuery = this.searchQuery
-      if (!this.searchQuery.trim()) {
-        this.searchActive = false
-        this._applySearchLayout(false)
-      }
     },
 
     // 重置分页并搜索第 1 页；引擎未初始化时由 search 内部懒初始化（自动读缓存建缓存），
@@ -1150,8 +1147,11 @@
         this.currentPage = 1
         this.allLoaded = false
         this.searched = false
-        this.searchActive = false
-        this._applySearchLayout(false)
+        // ⚠️ 空词收键盘【不退出搜索态】（v1.16.40 防塌陷）：主人实测「搜索栏连点两次就塌」——
+        // 连点第2下=收键盘→走这里，若置 searchActive=false 会与第1下的进入翻转在半秒内
+        // 连续翻转 7 个条件节点两次，轻量运行时 DOM 重排竞态 → 界面塌陷。
+        // 保持 searchActive 现状（ds 视图留在搜索空态「输入关键词开始搜索」，主路径本就 false），
+        // 退出搜索只走右滑 exitSearch / ✕ clearSearch 两个明确途径。
         // 作废在途搜索并复位加载/错误态，避免旧请求结果稍后写回空列表
         this.searchSeq++
         this.loading = false
