@@ -102,7 +102,9 @@
           <text class="ai-card-title">{{aiCardTitle}}</text>
           <text class="ai-card-text">{{aiCardText}}</text>
         </div>
-        <text class="result-count" if="{{searched && !showKeyboard && !loading && !aiMode}}">共 {{totalCount}} 条结果</text>
+        <!-- 结果计数：键盘打开也保持显示（v1.16.38）——此前 !showKeyboard 条件让键盘弹出时
+             这行消失、下方卡片整体上顶一下；流式布局下保留它无任何副作用 -->
+        <text class="result-count" if="{{searched && !loading && !aiMode}}">共 {{totalCount}} 条结果</text>
         <text class="engine-tip" if="{{showEngineTip}}" @click="goSettings">数据未就绪 · 点此去设置检查</text>
         <div class="result-item" for="{{visibleList}}" @click="gotoDetail($item.id)">
           <!-- 三行类名由 DatasetManager 按 meta.display.card 预拼完整类名（纯变量插值，禁拼接表达式） -->
