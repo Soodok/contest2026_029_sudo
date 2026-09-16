@@ -2,7 +2,7 @@
   // ========== 搜索引擎（全局引擎初始化，从原 splash.ux 提取到 app 生命周期）==========
   import { getSearchEngine } from './SearchEngine/SearchEngine.js'
   // 应用版本（与 src/manifest.json 的 versionName 保持同步——改版本时两处一起改）
-  const APP_VERSION = '1.16.33'
+  const APP_VERSION = '1.16.34'
   import { searchAllAsync, getItemByGlobalId, getDatasetEntries, getGroupEntries, getDatasetInfo } from './SearchEngine/DatasetManager.js'
 
   // ========== 日志系统（直接操作 storage）==========

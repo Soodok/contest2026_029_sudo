@@ -25,7 +25,5 @@
   "blockCount": 1,
   "bucketSize": 2048,
   "yearIndex": false,
-  "icon": "icon.png",
-  "desc": "健康养生、心理情绪、急救、护肤美妆与运动知识",
-  "tags": null
+  "icon": "icon.png"
 }

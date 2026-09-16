@@ -4,7 +4,7 @@
   "version": 1,
   "category": "文化",
   "author": "sudo",
-  "totalCount": 800,
+  "totalCount": 550,
   "fields": {
     "map": [
       "title",
@@ -25,7 +25,5 @@
   "blockCount": 1,
   "bucketSize": 2048,
   "yearIndex": false,
-  "icon": "icon.png",
-  "desc": "中国古诗词名篇，含朝代、作者与全文",
-  "tags": null
+  "icon": "icon.png"
 }

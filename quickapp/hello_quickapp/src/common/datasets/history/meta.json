@@ -5,8 +5,8 @@
   "category": "历史",
   "author": "sudo",
   "basePath": "/common/",
-  "dataNote": "历史集为 v4 旧格式存量数据，数据文件（meta.txt/map_*/detail_*/block_*/year_index.txt）位于 /common/ 根目录，不随本声明文件复制；引擎 basePath=/common/ 直接加载",
-  "totalCount": 2533,
+  "dataNote": "历史集为 v4 旧格式存量数据，数据文件（meta.txt/map_*/detail_*/block_*/year_index.txt）位于 /common/ 根目录；由 tools/split_dataset.js history（existing 模式）维护重建",
+  "totalCount": 850,
   "regionList": [
     "asia",
     "europe",
@@ -23,18 +23,35 @@
     "contemporary_china"
   ],
   "fields": {
-    "map": ["title", "year", "continent"],
+    "map": [
+      "title",
+      "year",
+      "continent"
+    ],
     "keyword": "keywords",
-    "detail": ["cause", "impact"],
-    "filter": ["continent"]
+    "detail": [
+      "cause",
+      "impact"
+    ],
+    "filter": [
+      "continent"
+    ]
   },
   "bucketSize": 4096,
-  "blockCount": 9,
-  "mapCount": 5,
-  "detailCount": 26,
+  "blockCount": 1,
+  "mapCount": 2,
+  "detailCount": 6,
   "mapChunkSize": 600,
   "detailChunkSize": 150,
   "yearIndex": true,
-  "extras": ["year_index.txt", "era_names.txt", "quotes.txt", "today_1.txt", "today_2.txt", "today_3.txt", "today_4.txt"],
+  "extras": [
+    "year_index.txt",
+    "era_names.txt",
+    "quotes.txt",
+    "today_1.txt",
+    "today_2.txt",
+    "today_3.txt",
+    "today_4.txt"
+  ],
   "icon": "/common/logo.png"
 }

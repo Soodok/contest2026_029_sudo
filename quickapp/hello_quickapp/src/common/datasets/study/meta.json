@@ -25,7 +25,5 @@
   "blockCount": 1,
   "bucketSize": 2048,
   "yearIndex": false,
-  "icon": "icon.png",
-  "desc": "学习效率、手机数码与百科知识",
-  "tags": null
+  "icon": "icon.png"
 }

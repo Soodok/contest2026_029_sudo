@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DIR = path.join(__dirname, '..', 'src', 'common');
-const TARGET = 1000;          // 历史集保留条数
+const TARGET = 850;          // 历史集保留条数
 const MAP_CHUNK = 600;
 const DETAIL_CHUNK = 150;
 const BUCKET_SIZE = 4096;

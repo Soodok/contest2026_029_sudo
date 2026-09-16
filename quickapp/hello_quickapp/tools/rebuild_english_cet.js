@@ -40,7 +40,7 @@ for (const [file, level] of [['cet4_raw.txt', '四级'], ['cet6_raw.txt', '六�
   }
 }
 // 精简：CET 词表按序保留前 800 条（前部是高频基础词，均匀采样反而会丢掉常用词）
-const EN_TARGET = 800;
+const EN_TARGET = 750;
 if (records.length > EN_TARGET) {
   records.length = EN_TARGET;
   console.log('英语集精简至前 ' + EN_TARGET + ' 条');
