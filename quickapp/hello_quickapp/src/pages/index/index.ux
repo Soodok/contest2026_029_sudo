@@ -653,6 +653,22 @@
 
     // 步长法计算吸附目标：gap 中点 = padLeft + i*step + iconW + spacing/2（step = iconW + spacing），
     // 目标 scrollX = gap - 视口中心(150)，钳制到 [0, 内容宽(含左右 padLeft) - 视口宽]
+    // 计算第 idx 位的对齐 scrollX（两符号中点对齐屏幕中心，钳制边界）
+    _catTargetX(idx) {
+      var p = this.snapParams
+      var step = p.iconW + p.spacing
+      var padLeft = p.padLeft || 0
+      var viewportW = 300
+      var maxX = Math.max(0, (2 * padLeft + p.count * p.iconW + (p.count - 1) * p.spacing) - viewportW)
+      var gap = padLeft + idx * step + p.iconW + p.spacing / 2
+      var target = gap - viewportW / 2
+      if (target < 0) target = 0
+      if (target > maxX) target = maxX
+      return target
+    },
+    // v1.16.65 主人指定交互「翻页式归位」：拖动全程跟手（scroll-x 保持 true），
+    // 松手后按滑动方向自动归位到【相邻上一位/下一位】——不允许停在中间乱位。
+    // 左滑（内容左移）→ 下一位；右滑 → 上一位；位移不足 1/4 步长 → 回当前位。
     snapCatScroll() {
       var p = this.snapParams
       if (!p || !p.enabled) return
@@ -660,27 +676,18 @@
       if (!scrollEl) return
       var curX = this._lastCatScrollX || 0
       var step = p.iconW + p.spacing
-      var padLeft = p.padLeft || 0
-      var viewportW = 300
-      var maxX = Math.max(0, (2 * padLeft + p.count * p.iconW + (p.count - 1) * p.spacing) - viewportW)
-      var viewCenter = viewportW / 2
-      var bestX = 0
-      var bestDist = Infinity
-      for (var i = 0; i < p.count - 1; i++) {
-        var gap = padLeft + i * step + p.iconW + p.spacing / 2
-        var target = gap - viewCenter
-        if (target < 0) target = 0
-        if (target > maxX) target = maxX
-        var dist = Math.abs(target - curX)
-        if (dist < bestDist) {
-          bestDist = dist
-          bestX = target
-        }
-      }
-      // v1.16.64：吸附位偏离 < 步长 30% 不触发——小偏移不拽回（原 >1px 即滚=频繁二次动画）
-      var stepThresh = (p.iconW + p.spacing) * 0.3
-      if (Math.abs(bestX - curX) > stepThresh) {
-        scrollEl.scrollTo({ left: bestX, top: 0, behavior: 'smooth' })
+      var curIdx = this._catIdx || 0
+      var baseX = this._catTargetX(curIdx)
+      var delta = curX - baseX
+      var newIdx = curIdx
+      if (delta > step * 0.25) newIdx = curIdx + 1        // 左滑 → 下一位
+      else if (delta < -step * 0.25) newIdx = curIdx - 1  // 右滑 → 上一位
+      if (newIdx < 0) newIdx = 0
+      if (newIdx > p.count - 1) newIdx = p.count - 1
+      this._catIdx = newIdx
+      var target = this._catTargetX(newIdx)
+      if (Math.abs(target - curX) > 1) {
+        scrollEl.scrollTo({ left: target, top: 0, behavior: 'smooth' })
       }
     },
 
