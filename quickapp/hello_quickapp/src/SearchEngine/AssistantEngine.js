@@ -218,4 +218,4 @@ function getAssistant() {
   return _instance
 }
 
-export { getAssistant, MODE }
+export { getAssistant }   // MODE 仅引擎内部使用，未导出（2026-09-17 审查清理死导出）

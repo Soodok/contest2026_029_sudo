@@ -161,6 +161,17 @@
   import storage from '@system.storage'
   import { getDetailByGlobalId } from '../../SearchEngine/DatasetDetail.js'
 
+  // 洲代码 → 中文（本页 displayRegion 与 _getRegionName 共用；app.ux 的 global.searchHistory
+  // 另有一份同源映射作用于搜索结果格式化，赛前不跨文件重构，改动需三处同步）
+  const REGION_MAP = {
+    'asia': '亚洲',
+    'europe': '欧洲',
+    'africa': '非洲',
+    'north_america': '北美洲',
+    'south_america': '南美洲',
+    'other': '其他'
+  }
+
   export default {
     private: {
       loading: true,
@@ -194,15 +205,7 @@
         return this.isFavorited ? '已收藏' : '收藏'
       },
       displayRegion() {
-        var regionMap = {
-          'asia': '亚洲',
-          'europe': '欧洲',
-          'africa': '非洲',
-          'north_america': '北美洲',
-          'south_america': '南美洲',
-          'other': '其他'
-        }
-        return regionMap[this.region] || this.region || '未知'
+        return REGION_MAP[this.region] || this.region || '未知'
       }
     },
 
@@ -526,16 +529,8 @@
     // ============================================================
     _getRegionName(regionId) {
       var regionList = global.searchEngine ? global.searchEngine.getRegionList() : []
-      var regionMap = {
-        'asia': '亚洲',
-        'europe': '欧洲',
-        'africa': '非洲',
-        'north_america': '北美洲',
-        'south_america': '南美洲',
-        'other': '其他'
-      }
       var tag = (regionList && regionList[regionId]) ? regionList[regionId] : '未知'
-      return regionMap[tag] || tag
+      return REGION_MAP[tag] || tag
     },
 
     // ============================================================

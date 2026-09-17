@@ -412,7 +412,6 @@
       lastPageY: 0,
       lastCatScrollX: 0,
       snapParams: { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: true },
-      searchMarginTop: 0,
       categories: [
         { name: '健康', icon: '/common/icons/health.png', colorClass: 'ci-green' },
         { name: '科学', icon: '/common/icons/science.png', colorClass: 'ci-blue' },
