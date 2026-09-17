@@ -2,7 +2,7 @@
 // 架构见 docs/2026-09-05-资料集模块化规范v1.md
 // 每个资料集一个 SearchEngine 实例（零改动复用已验证的单集逻辑），
 // 全局 ID = (datasetId << 20) | localId
-import { SearchEngine } from './SearchEngine.js'
+import { SearchEngine, CACHE_VERSION } from './SearchEngine.js'
 
 // 资料集注册清单（内置集；蓝牙动态集由手机端下发清单后追加到 DYNAMIC_DATASETS）
 console.log('[DM] module evaluating')
@@ -302,7 +302,9 @@ async function clearAllCaches() {
 
   // 丢弃内存引擎池：下次搜索/加载按当前数据文件重建缓存
   engines = {}
-  console.log('[DM] clearAllCaches: 已清理 ' + ok + '/' + DATASETS.length + ' 个数据集，共 ' + keys + ' 个键位（预热标记已清除）')
+  // 清缓存必须同时清标记（v1.16.66）：否则下次启动不重走 loading
+  try { require('@system.storage').delete({ key: 'cache_built' }) } catch (e) {}
+  console.log('[DM] clearAllCaches: 已清理 ' + ok + '/' + DATASETS.length + ' 个数据集，共 ' + keys + ' 个键位')
   return { datasets: DATASETS.length, cleared: ok, keys: keys }
 }
 
@@ -356,10 +358,29 @@ async function warmupAllCaches(onProgress) {
       try { onProgress(Math.round(done / DATASETS.length * 100), '预加载资料 · ' + ds.name) } catch (e) {}
     }
   }
-  console.log('[DM] 预热完成 ' + done + '/' + DATASETS.length + ' 集（流式：逐集建缓存逐集释放内存）')
+  // v1.16.66 首次加载判断（主人定案）：预热完成写标记——下次启动 isCacheBuilt() 命中
+  // 直接进主界面；中断/失败（标记没写）→ 下次启动自动重走 loading 重跑（幂等自愈）
+  try {
+    require('@system.storage').set({ key: 'cache_built', value: String(CACHE_VERSION) })
+  } catch (e) {}
+  console.log('[DM] 预热完成 ' + done + '/' + DATASETS.length + ' 集（流式：逐集建缓存逐集释放内存，标记已写）')
   return done
 }
 
+
+// 缓存是否已建（首次加载判断，v1.16.66 主人定案）：标记值==当前数据版本
+function isCacheBuilt() {
+  return new Promise(function(resolve) {
+    try {
+      var cur = String(CACHE_VERSION || '')
+      require('@system.storage').get({
+        key: 'cache_built',
+        success: function(data) { resolve(String(data) === cur && cur !== '') },
+        fail: function() { resolve(false) }
+      })
+    } catch (e) { resolve(false) }
+  })
+}
 
 // 取资料集展示信息（图标/名称/简介/标签）——供首页「资料详情视图」使用
 // tags 的 cls 在此预拼（选中态由 pickTag 重设），模板只做纯变量插值

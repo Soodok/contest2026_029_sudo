@@ -370,6 +370,7 @@
 <script>
   // 语音搜索 / AI 搜索统一引擎（真链路=interconnect 手机 App；模拟链路=本地可运行模拟源）
   import { getAssistant } from '../../SearchEngine/AssistantEngine.js'
+  import { isCacheBuilt } from '../../SearchEngine/DatasetManager.js'
   import router from '@system.router'
   import device from '@system.device'
   import prompt from '@system.prompt'
@@ -510,6 +511,17 @@
     },
 
     onInit() {
+      // v1.16.66 首次加载判断（主人定案）：索引缓存未建（首次安装/数据更新/清缓存后）
+      // → 跳加载页建缓存（进度可见）；建完写标记，之后启动直接进主界面不闪加载页。
+      // 中断/失败（标记没写）→ 下次启动自动重走（重跑幂等自愈）。
+      try {
+        isCacheBuilt().then(function(built) {
+          if (!built) {
+            console.log('[DS] 索引缓存未建，进入加载页')
+            router.replace({ uri: '/pages/loading' })
+          }
+        })
+      } catch (e) { console.log('[DS] 缓存判断异常: ' + e.message) }
       // 资料入口动态化：显示真实安装的资料集（历史主集 + 蓝牙/内置资料集）
       try {
         // 入口清单由 app.ux onCreate 挂 global（避免 index 直接 import 库模块的双实例坑）

@@ -1612,4 +1612,6 @@ function getSearchEngine() {
   return instance
 }
 
-export { SearchEngine, getSearchEngine }
+// 缓存版本号独立导出：首次加载判断/预热标记比对用（免建引擎实例）
+var CACHE_VERSION = C.cache.version
+export { SearchEngine, getSearchEngine, CACHE_VERSION }

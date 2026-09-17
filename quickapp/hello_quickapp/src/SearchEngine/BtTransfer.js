@@ -19,6 +19,12 @@
 'use strict'
 
 var receiving = null // { ds, name, total, files: {fname: {chunks:{i:data}, got, last}} }
+
+// v1.16.66 传输状态（主人需求：专门蓝牙传输界面）：
+// 供 pages/btransfer 轮询显示——phase: idle/receiving/saving/done/error/aborted
+var transfer = { phase: 'idle', ds: '', dsId: '', name: '', total: 0, done: 0, currentFile: '', error: '' }
+function getTransferState() { return transfer }
+function _resetTransfer() { transfer = { phase: 'idle', ds: '', dsId: '', name: '', total: 0, done: 0, currentFile: '', error: '' } }
 var registered = false
 
 function _log(msg, level) {
@@ -64,6 +70,9 @@ function handleMessage(data) {
 
   if (msg.t === 'ds-begin') {
     receiving = { ds: String(msg.ds || ''), name: String(msg.name || msg.ds || ''), total: msg.total || 0, files: {} }
+    // 进入专门传输界面（无退出入口，只能手机端停止或传完）
+    transfer = { phase: 'receiving', ds: receiving.ds, dsId: '', name: receiving.name, total: receiving.total, done: 0, currentFile: '', error: '' }
+    try { require('@system.router').replace({ uri: '/pages/btransfer' }) } catch (e) {}
     _log('开始接收资料集: ' + receiving.ds + '（' + receiving.total + ' 个文件）')
   } else if (msg.t === 'ds-chunk' && receiving && receiving.ds === String(msg.ds || '')) {
     var fname = String(msg.f || '')
@@ -71,13 +80,24 @@ function handleMessage(data) {
     var rec = receiving.files[fname] || (receiving.files[fname] = { chunks: {}, got: 0, last: false })
     var idx = msg.i || 0
     if (rec.chunks[idx] === undefined) { rec.chunks[idx] = String(msg.data || ''); rec.got++ }
-    if (msg.last) rec.last = true
+    transfer.currentFile = fname
+    if (msg.last && !rec.last) { rec.last = true; transfer.done++ }
+    else if (msg.last) rec.last = true
   } else if (msg.t === 'ds-file' && receiving && receiving.ds === String(msg.ds || '')) {
     // 单帧整文件（小文件可不切片）。空文件名防护（审查修复）：空名会让后续
     // flushFile 对目录本身 writeText → 整批落盘失败
     var fname2 = String(msg.f || '')
     if (!fname2) return
+    if (!receiving.files[fname2]) transfer.done++
     receiving.files[fname2] = { chunks: { 0: String(msg.data || '') }, got: 1, last: true }
+    transfer.currentFile = fname2
+  } else if (msg.t === 'ds-abort') {
+    // 手机端主动停止（主人定案：传输中唯一退出途径）——回首页
+    _log('手机端已停止传输', 'warn')
+    receiving = null
+    _resetTransfer()
+    transfer.phase = 'aborted'
+    try { require('@system.router').replace({ uri: '/pages/index' }) } catch (e) {}
   } else if (msg.t === 'ds-end' && receiving && receiving.ds === String(msg.ds || '')) {
     var ds = receiving.ds
     var name = receiving.name
@@ -99,9 +119,12 @@ function handleMessage(data) {
       incomplete.push('文件数不符(声明' + declared + '/实收' + names.length + ')')
     }
     if (incomplete.length) {
+      transfer.phase = 'error'
+      transfer.error = '资料不完整：' + incomplete.join('、') + '（请在手机端重发）'
       _log('资料集 ' + ds + ' 完整性校验失败，拒绝落盘: ' + incomplete.join('、') + '（请重新发送）', 'error')
       return
     }
+    transfer.phase = 'saving'
     _log('接收完成: ' + ds + '，共 ' + names.length + ' 个文件，校验通过，落盘中…')
     var chain = Promise.resolve()
     Object.keys(files).forEach(function(fn) {
@@ -111,10 +134,13 @@ function handleMessage(data) {
       _log('落盘完成: internal://files/datasets/' + ds + '/', 'success')
       var DatasetManager = require('./DatasetManager.js')
       var dsObj = DatasetManager.registerDynamicDataset({ dirName: ds, name: name })
-      // 立刻进加载页：只给这个文件建缓存（loading 页 source=bt 单集模式）
-      var router = require('@system.router')
-      router.replace({ uri: '/pages/loading', params: { source: 'bt', dsDir: dsObj.dirName, dsId: String(dsObj.id) } })
+      // 状态置 done（含 dsId）——由传输页检测后跳 loading 单集建缓存（v1.16.66）
+      transfer.phase = 'done'
+      transfer.dsId = String(dsObj.id)
+      transfer.done = names.length
     }).catch(function(e) {
+      transfer.phase = 'error'
+      transfer.error = '保存失败：' + (e && e.message ? e.message : '未知')
       _log('落盘失败: ' + (e && e.message), 'error')
     })
   }
@@ -146,4 +172,4 @@ function initBtReceiver() {
   }
 }
 
-module.exports = { initBtReceiver: initBtReceiver, handleMessage: handleMessage, baseDir: baseDir }
+module.exports = { initBtReceiver: initBtReceiver, handleMessage: handleMessage, baseDir: baseDir, getTransferState: getTransferState }
