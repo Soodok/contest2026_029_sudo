@@ -26,8 +26,21 @@ async function _loadMeta(eng) {
   var metaObj = {}
   try { metaObj = JSON.parse(raw) } catch (e) { metaObj = {} }
   if (!metaObj.fields) {
+    // 历史集特例（v1.16.63 修复）：数据在 /common 根目录，但声明文件
+    // （含 fields）在 datasets/history/meta.json —— 直接读它拿字段名
+    if (eng.basePath === '/common/') {
+      raw = await _readText('/common/datasets/history/meta.json')
+      try { metaObj = JSON.parse(raw) } catch (e1) { metaObj = {} }
+    }
+  }
+  if (!metaObj.fields) {
     raw = await _readText(eng.basePath + 'meta.txt')
     try { metaObj = JSON.parse(raw) } catch (e2) { metaObj = {} }
+  }
+  // 历史集最终兜底：物化列序就是 cause/impact（v1.16.63）
+  var isHistory = (eng.basePath === '/common/')
+  if (!metaObj.fields && isHistory) {
+    metaObj.fields = { detail: ['cause', 'impact'] }
   }
   var names = []
   var fd = (metaObj.fields && metaObj.fields.detail) || []
@@ -82,7 +95,9 @@ async function getDetailByGlobalId(gid) {
   if (line) {
     // detail 行：localId|关键词|字段值1|字段值2...（列 2 起按 fields.detail 顺序）
     for (var ci = 2; ci < line.length; ci++) {
-      var rawName = meta.detFieldNames[ci - 2] || ('详情' + (ci - 1))
+      // v1.16.63 最底层兜底：meta 读取失败时也保证字段名正确（历史集列序固定 cause/impact）
+      var rawName = meta.detFieldNames[ci - 2] ||
+        (ds.id === 0 ? (ci === 2 ? 'cause' : 'impact') : ('详情' + (ci - 1)))
       var name = FIELD_NAME_MAP[rawName] || rawName
       // 物化时真实换行编码为字面 \n 两字符（| 是列分隔符，裸换行会断行），这里还原
       var value = (line[ci] || '').replace(/\\n/g, '\n')
@@ -93,9 +108,11 @@ async function getDetailByGlobalId(gid) {
   var result = {
     isDataset: true,
     dsName: ds.name,
-    title: (mapDoc && mapDoc.title) || '',
+    // v1.16.63 兜底：mapDoc 缺失时用 detail 行关键词首段当标题（保证简略卡始终渲染，
+    // 避免详情卡上移造成『简略/详情位置反了』的视觉）
+    title: (mapDoc && mapDoc.title) || (line && line[1] ? String(line[1]).split(/[,，]/)[0] : '') || '',
     // 资料集无年份语义（物化 year=0 → 引擎返回「公元元年」）：年份位显示集标签
-    yearDisplay: ds.id !== 0 ? ds.tag : ((mapDoc && mapDoc.yearDisplay) || ds.tag),
+    yearDisplay: ds.id !== 0 ? ds.tag : ((mapDoc && mapDoc.yearDisplay) || ds.tag || '历史'),
     region: (mapDoc && mapDoc.region) || ds.tag,
     keywords: line && line[1] ? line[1].split(',').filter(function(k) { return k }) : [],
     details: details
