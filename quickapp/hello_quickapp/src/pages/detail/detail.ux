@@ -43,18 +43,6 @@
         </div>
       </div>
 
-        <!-- 原因 -->
-        <div class="section-card" if="{{!loading && cause}}">
-          <text class="section-title">原因 / 背景</text>
-          <text class="section-content">{{cause}}</text>
-        </div>
-
-        <!-- 影响 -->
-        <div class="section-card" if="{{!loading && impact}}">
-          <text class="section-title">影响</text>
-          <text class="section-content">{{impact}}</text>
-        </div>
-
 
       <!-- 收藏 -->
         <div class="{{favBtnClass}}" @click="toggleFavorite">
@@ -156,10 +144,9 @@
 
 <script>
   import router from '@system.router'
-  import file from '@system.file'
   import prompt from '@system.prompt'
   import storage from '@system.storage'
-  import { getDetailByGlobalId } from '../../SearchEngine/DatasetDetail.js'
+  import { getDetailByGlobalId, clearDetailCache } from '../../SearchEngine/DatasetDetail.js'
 
   // 洲代码 → 中文（本页 displayRegion 与 _getRegionName 共用；app.ux 的 global.searchHistory
   // 另有一份同源映射作用于搜索结果格式化，赛前不跨文件重构，改动需三处同步）
@@ -179,8 +166,6 @@
       yearDisplay: '',
       region: '',
       keywordList: [],
-      cause: '',
-      impact: '',
       isFavorited: false,
       detailFields: [],
       eventId: null,
@@ -226,6 +211,11 @@
       this.eventId = id
     },
 
+    // 退出详情页：清 detail 内存缓存（v1.16.61 主人指定：看完一页清一次，只留一个）
+    onDestroy() {
+      clearDetailCache()
+    },
+
     // @system.file.readText 必须在 onShow 之后调用（onInit 时 DomPage 未 ready，回调丢失）——加载统一挂 onShow
     onShow() {
       if (this._loadStarted) return
@@ -246,292 +236,36 @@
     return
   }
 
-  // ===== 资料集分支：全局 ID（datasetId<<20|localId）走资料集详情适配 =====
-  if (id >= 1048576) {
-    try {
-      var dsDetail = await getDetailByGlobalId(id)
-      if (dsDetail) {
-        this.detailTitle = dsDetail.title || '未知条目'
-        this.yearDisplay = dsDetail.yearDisplay || ''
-        this.region = dsDetail.region || ''
-        this.keywordList = dsDetail.keywords && dsDetail.keywords.length ? dsDetail.keywords.slice(0, 12) : [dsDetail.title]
-        this.detailFields = dsDetail.details
-        this.loading = false
-        this.checkFavoriteStatus(id)
-        if (typeof global.addRuntimeLog === 'function') {
-          global.addRuntimeLog('[detail] 资料集详情加载成功: ' + this.detailTitle, 'success')
-        }
-        return
-      }
-      this.errorMsg = '资料集中未找到该条目'
-      this.loading = false
-      return
-    } catch (e) {
-      this.errorMsg = '资料集详情加载失败: ' + e.message
-      this.loading = false
-      if (typeof global.addRuntimeLog === 'function') {
-        global.addRuntimeLog('[detail] 资料集加载异常: ' + e.message, 'error')
-      }
-      return
-    }
-  }
-
-  this.checkFavoriteStatus(id)
-
-  // ==========================================================
-  // 获取 Map 数据
-  // ==========================================================
-  var mapData = null
-
-  // 第一步：尝试从引擎获取（300ms 超时）
+  // ===== 统一详情路径（v1.16.61 主人确认）：历史集与资料集都走引擎适配层 =====
+  // 历史集 globalId 编码天然兼容（dsId=0 时 id 不变）；引擎路径受益于 map LRU
+  //（搜过的集 map 常驻内存 → 详情零文件读）与 detail 缓存（LRU=1，看完一页替换）
   try {
-    var engineResult = await Promise.race([
-      global.getItemById(id),
-      new Promise(function(resolve) {
-        setTimeout(function() {
-          resolve(null)
-        }, 300)
-      })
-    ])
-    if (engineResult) {
-      mapData = engineResult
+    var detail = await getDetailByGlobalId(id)
+    if (detail) {
+      this.detailTitle = detail.title || '未知条目'
+      this.yearDisplay = detail.yearDisplay || ''
+      this.region = detail.region || ''
+      this.keywordList = detail.keywords && detail.keywords.length ? detail.keywords.slice(0, 12) : [detail.title]
+      this.detailFields = detail.details || []
+      this.loading = false
+      this.checkFavoriteStatus(id)
       if (typeof global.addRuntimeLog === 'function') {
-        global.addRuntimeLog('[detail] 引擎获取 Map 成功（内存命中）', 'info')
+        global.addRuntimeLog('[detail] 详情加载成功: ' + this.detailTitle, 'success')
       }
+      return
     }
-  } catch(e) {
-    if (typeof global.addRuntimeLog === 'function') {
-      global.addRuntimeLog('[detail] 引擎获取异常: ' + e.message, 'warn')
-    }
-  }
-
-  // 第二步：引擎超时或失败 → 从缓存加载 Map 到内存
-  if (!mapData) {
-    if (typeof global.addRuntimeLog === 'function') {
-      global.addRuntimeLog('[detail] 引擎未命中，尝试从缓存加载 Map', 'info')
-    }
-    var loaded = await this._loadMapFromCache(id)
-    if (loaded) {
-      // 缓存加载成功 → 再试一次引擎
-      try {
-        var result2 = await global.getItemById(id)
-        if (result2) {
-          mapData = result2
-          if (typeof global.addRuntimeLog === 'function') {
-            global.addRuntimeLog('[detail] 缓存加载后引擎获取成功', 'success')
-          }
-        }
-      } catch(e) {}
-    }
-  }
-
-  // 第三步：缓存也没有 → 直接读文件（兜底）
-  if (!mapData) {
-    if (typeof global.addRuntimeLog === 'function') {
-      global.addRuntimeLog('[detail] 缓存也没有，直接读 Map 文件', 'warn')
-    }
-    mapData = await this._readMapFileDirectly(id)
-    if (mapData) {
-      if (typeof global.addRuntimeLog === 'function') {
-        global.addRuntimeLog('[detail] 直接读 Map 文件成功', 'success')
-      }
-    }
-  }
-
-  if (!mapData) {
-    this.errorMsg = '未找到数据 (ID=' + id + ')'
+    this.errorMsg = '未找到该条目 (ID=' + id + ')'
     this.loading = false
     return
-  }
-
-  // 填充基础信息
-  this.yearDisplay = mapData.yearDisplay || '未知'
-  this.region = mapData.region || '未知'
-  this.detailTitle = mapData.title || '未知事件'
-  var fullKeywordList = [this.detailTitle]
-
-  // ==========================================================
-  // 读 detail 文件
-  // ==========================================================
-  var detailData = await this._readDetailFileDirectly(id)
-  if (detailData) {
-    if (detailData.restKeywords && detailData.restKeywords.length > 0) {
-      fullKeywordList = fullKeywordList.concat(detailData.restKeywords)
+  } catch (err) {
+    this.errorMsg = '详情加载失败: ' + err.message
+    this.loading = false
+    if (typeof global.addRuntimeLog === 'function') {
+      global.addRuntimeLog('[detail] 详情加载异常: ' + err.message, 'error')
     }
-    this.cause = detailData.cause || ''
-    this.impact = detailData.impact || ''
-  } else {
-    this.cause = ''
-    this.impact = ''
-  }
-
-  this.keywordList = fullKeywordList
-  this.loading = false
-
-  if (typeof global.addRuntimeLog === 'function') {
-    global.addRuntimeLog('[detail] 加载完成', 'info')
+    return
   }
 },
-
-    // ============================================================
-    // 从 storage 缓存加载 Map 到内存
-    // ============================================================
-    _loadMapFromCache(id) {
-      var self = this
-      return new Promise(function(resolve) {
-        try {
-          var engine = global.searchEngine
-          if (!engine) {
-            resolve(false)
-            return
-          }
-
-          // ⚠️ 优先用引擎实例的真值（meta 加载后才有），global 只是兜底
-          var mapChunkSize = (global.searchEngine && global.searchEngine.mapChunkSize) || global.mapChunkSize || 600
-          var mapId = Math.floor(id / mapChunkSize)
-
-          // 检查是否已经在内存中
-          if (engine.mapData && engine.mapData[mapId]) {
-            resolve(true)
-            return
-          }
-
-          // 从 storage 读取缓存
-          var storageModule = require('@system.storage')
-          var cacheKey = engine._getMapCacheKey ? engine._getMapCacheKey(mapId) : ('search_engine_map_v1_' + mapId)
-
-          storageModule.get({
-            key: cacheKey,
-            success: function(data) {
-              try {
-                var mapData = JSON.parse(data)
-                if (!engine.mapData) engine.mapData = {}
-                engine.mapData[mapId] = mapData
-                if (typeof global.addRuntimeLog === 'function') {
-                  global.addRuntimeLog('[detail] 从缓存加载 Map ' + mapId + ' 成功', 'success')
-                }
-                resolve(true)
-              } catch(e) {
-                resolve(false)
-              }
-            },
-            fail: function() {
-              resolve(false)
-            }
-          })
-        } catch(e) {
-          resolve(false)
-        }
-      })
-    },
-
-    // ============================================================
-    // 直接读 Map 文件（兜底）
-    // ============================================================
-    _readMapFileDirectly(id) {
-      var self = this
-      return new Promise(function(resolve) {
-        try {
-          var file = require('@system.file')
-          // ⚠️ 优先用引擎实例的真值（meta 加载后才有），global 只是兜底
-          var mapChunkSize = (global.searchEngine && global.searchEngine.mapChunkSize) || global.mapChunkSize || 600
-          var chunkIndex = Math.floor(id / mapChunkSize)
-          var mapPath = '/common/map_' + chunkIndex + '.txt'
-
-          file.readText({
-            uri: mapPath,
-            success: function(data) {
-              try {
-                var lines = data.text.split('\n').filter(function(line) { return line.trim() })
-                for (var i = 0; i < lines.length; i++) {
-                  var parts = lines[i].split('|')
-                  if (parts.length < 4) continue
-                  var mapId = parseInt(parts[0], 10)
-                  if (mapId === id) {
-                    resolve({
-                      id: mapId,
-                      year: parseInt(parts[1], 10),
-                      yearDisplay: self._formatYearDisplay(parseInt(parts[1], 10)),
-                      regionId: parseInt(parts[2], 10),
-                      region: self._getRegionName(parseInt(parts[2], 10)),
-                      title: parts[3] || '未知事件'
-                    })
-                    return
-                  }
-                }
-                resolve(null)
-              } catch(e) {
-                resolve(null)
-              }
-            },
-            fail: function(err, code) {
-              resolve(null)
-            }
-          })
-        } catch(e) {
-          resolve(null)
-        }
-      })
-    },
-
-    // ============================================================
-    // 直接读 detail 文件
-    // ============================================================
-    _readDetailFileDirectly(id) {
-      return new Promise(function(resolve) {
-        try {
-          var file = require('@system.file')
-          // ⚠️ 同上：历史集真实 detailChunkSize=150，恒用 100 会读到别的条目
-          var chunkSize = (global.searchEngine && global.searchEngine.detailChunkSize) || global.detailChunkSize || 150
-          var chunkIndex = Math.floor(id / chunkSize)
-          var offset = id % chunkSize
-          var uri = '/common/detail_' + chunkIndex + '.txt'
-
-          file.readText({
-            uri: uri,
-            success: function(data) {
-              try {
-                var lines = data.text.split('\n')
-                if (offset >= lines.length) {
-                  resolve(null)
-                  return
-                }
-                var parts = lines[offset].split('|')
-                if (parts.length < 4) {
-                  resolve(null)
-                  return
-                }
-                var restStr = parts[1] || ''
-                var restKeywords = restStr.split(',').filter(function(k) {
-                  return k && k.trim() !== ''
-                })
-                resolve({
-                  restKeywords: restKeywords,
-                  cause: parts[2] || '',
-                  impact: parts[3] || ''
-                })
-              } catch(e) {
-                resolve(null)
-              }
-            },
-            fail: function(err, code) {
-              resolve(null)
-            }
-          })
-        } catch(e) {
-          resolve(null)
-        }
-      })
-    },
-
-    // ============================================================
-    // 获取地区名称
-    // ============================================================
-    _getRegionName(regionId) {
-      var regionList = global.searchEngine ? global.searchEngine.getRegionList() : []
-      var tag = (regionList && regionList[regionId]) ? regionList[regionId] : '未知'
-      return REGION_MAP[tag] || tag
-    },
 
     // ============================================================
     // 收藏功能

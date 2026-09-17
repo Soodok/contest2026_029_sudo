@@ -3,7 +3,9 @@
 // ⚠️ 必须显式 import：各 JS 模块作用域独立，DATASETS/decodeGlobalId/ensureEngine 不会凭空可见
 import { DATASETS, ensureEngine, decodeGlobalId } from './DatasetManager.js'
 
-var FIELD_NAME_MAP = { source: '出处', content: '正文', keywords: '关键词', author: '作者' }
+var FIELD_NAME_MAP = { source: '出处', content: '正文', keywords: '关键词', author: '作者',
+  // 历史集（v1.16.61 统一引擎路径后，历史集字段经此映射显示中文名）
+  cause: '原因/背景', impact: '影响/做法' }
 
 function _readText(uri) {
   // file 用函数内 require（与引擎一致——顶层静态 import 原生模块在快应用互操作下不可靠）
@@ -40,7 +42,20 @@ async function _loadMeta(eng) {
   }
 }
 
+// detail 内存缓存（v1.16.61 主人指定）：看完一页清一次、最多留一个——
+// 同一详情页的重复访问（重渲染/收藏切换）免重读文件；加载新详情时替换旧页；
+// 退出详情页（detail.ux onDestroy）调 clearDetailCache 主动清空。
+var _detailCache = null   // { key: gid 字符串, data: 详情对象 }
+
+function clearDetailCache() {
+  _detailCache = null
+}
+
 async function getDetailByGlobalId(gid) {
+  var cacheKey = String(gid)
+  if (_detailCache && _detailCache.key === cacheKey) {
+    return _detailCache.data
+  }
   var d = decodeGlobalId(gid)
   var ds = null
   for (var i = 0; i < DATASETS.length; i++) {
@@ -75,7 +90,7 @@ async function getDetailByGlobalId(gid) {
     }
   }
 
-  return {
+  var result = {
     isDataset: true,
     dsName: ds.name,
     title: (mapDoc && mapDoc.title) || '',
@@ -85,7 +100,10 @@ async function getDetailByGlobalId(gid) {
     keywords: line && line[1] ? line[1].split(',').filter(function(k) { return k }) : [],
     details: details
   }
+  // 写入缓存（替换旧页 = 只留一个，v1.16.61 主人指定）
+  _detailCache = { key: cacheKey, data: result }
+  return result
 }
 
 
-export { getDetailByGlobalId }
+export { getDetailByGlobalId, clearDetailCache }

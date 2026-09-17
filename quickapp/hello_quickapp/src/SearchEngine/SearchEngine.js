@@ -66,23 +66,24 @@ var C = {
     expireMinutes: 10
   },
   
-  // LRU 上限：数据精简后单集 ≤1200 条 → chunk ≤3、map ≤6，原 maxLoadedMaps:5 装不下
-  // life 集的 6 个 Map，会触发 LRU 淘汰导致搜索反复读文件（真机上是大头开销）
-  maxLoadedChunks: 12,
-  maxLoadedMaps: 12,
+  // LRU 上限（v1.16.61 主人指定动态内存策略）：Block 最多存活 2、Map 最多留 4。
+  // 超限即淘汰最久未用的——内存只保留"最近用到的"，其余放回 storage 缓存按需重载
+  //（淘汰的只是内存副本，storage 持久缓存仍在，重载便宜）。
+  // ⚠️ 必须 > 0：0 会让淘汰 while 变死循环（见 _ensureMap/_ensureChunk 内注释）
+  maxLoadedChunks: 2,
+  maxLoadedMaps: 4,
   //调度策略：按需加载（默认）或预加载
   blockPreload: {
     enabled: true,      // 是否启用 Block 预加载
-    // ⚠️ 0 = 全部预载：数据精简后单集 chunk ≤3，全量预载让搜索时块读取零 I/O
-    maxBlocks: 8,        // 最多预加载几个 Block（0 = 全部）
+    // v1.16.61：与 LRU 上限对齐（预载超限只会立刻被淘汰，是无效 I/O）
+    maxBlocks: 2,        // 最多预加载几个 Block（0 = 全部）
     preloadOnInit: true  // 完整初始化时预加载（快速启动时强制跳过）
   },
   
   mapPreload: {
-    enabled: true,           // 是否启用预加载（默认关闭，保持按需加载）
-    // ⚠️ 0 = 全部预载：单集 map 数 ≤6（life 1200 条 / mapChunkSize 200），
-    // 全量预载可避免搜索时 LRU 淘汰造成的反复读文件（真机上的主要慢因）
-    maxMaps: 12,               // 最多预加载几个 Map（0 = 全部加载）
+    enabled: true,           // 是否启用预加载
+    // v1.16.61：与 LRU 上限对齐（Map 最多留 4，预载超限即淘汰）
+    maxMaps: 4,               // 最多预加载几个 Map（0 = 全部加载）
     preloadOnInit: true      // 是否在完整初始化（非快速启动）时预加载
   },
   // ⚠️ 生产环境关闭：引擎内部每一步都会 _logInfo/_logSuccess，真机上日志写入本身
