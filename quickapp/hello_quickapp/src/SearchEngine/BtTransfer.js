@@ -52,9 +52,14 @@ function flushFile(ds, fname, parts) {
 }
 
 // 处理一条 interconnect 消息（JSON 帧，见头部协议）
+// ⚠️ 消息形态双兼容（审查修复）：官方互联层可能以 {data:'<json>'} 包装投递
+//（AssistantEngine 即按 data.data 解析），也可能直接投递裸字符串/对象——
+// 两种形态都兜住，真机联调无需再改。
 function handleMessage(data) {
+  var payload = data
+  if (data && typeof data === 'object' && typeof data.data === 'string') payload = data.data
   var msg
-  try { msg = typeof data === 'string' ? JSON.parse(data) : data } catch (e) { return }
+  try { msg = typeof payload === 'string' ? JSON.parse(payload) : payload } catch (e) { return }
   if (!msg || !msg.t) return
 
   if (msg.t === 'ds-begin') {
@@ -68,8 +73,10 @@ function handleMessage(data) {
     if (rec.chunks[idx] === undefined) { rec.chunks[idx] = String(msg.data || ''); rec.got++ }
     if (msg.last) rec.last = true
   } else if (msg.t === 'ds-file' && receiving && receiving.ds === String(msg.ds || '')) {
-    // 单帧整文件（小文件可不切片）
+    // 单帧整文件（小文件可不切片）。空文件名防护（审查修复）：空名会让后续
+    // flushFile 对目录本身 writeText → 整批落盘失败
     var fname2 = String(msg.f || '')
+    if (!fname2) return
     receiving.files[fname2] = { chunks: { 0: String(msg.data || '') }, got: 1, last: true }
   } else if (msg.t === 'ds-end' && receiving && receiving.ds === String(msg.ds || '')) {
     var ds = receiving.ds
@@ -95,13 +102,21 @@ function handleMessage(data) {
 }
 
 // 应用级监听（app.ux onCreate 调一次；重复调用幂等）
+// ⚠️ 包装链（审查修复）：AssistantEngine 也在这条通道上设 conn.onmessage（语音/AI 真链路），
+// 直接赋值会互相覆盖（后设者赢，另一模块静默失效）。此处保留原 handler 并转发，
+// 无论设置顺序如何，两个模块都能收到消息。
 function initBtReceiver() {
   if (registered) return false
   try {
     var interconnect = require('@system.interconnect')
     var conn = interconnect.instance()
+    var prevHandler = conn.onmessage
     conn.onmessage = function(data) {
       try { handleMessage(data) } catch (e) { _log('消息处理异常: ' + (e && e.message), 'error') }
+      // 转发给此前的监听者（如 AssistantEngine 的语音/AI 应答处理）
+      if (typeof prevHandler === 'function') {
+        try { prevHandler(data) } catch (e) {}
+      }
     }
     registered = true
     _log('蓝牙资料接收器已就绪（应用级全局监听）', 'success')

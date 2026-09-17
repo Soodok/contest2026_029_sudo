@@ -118,6 +118,14 @@ function registerDynamicDataset(opt) {
   }
   DATASETS.push(ds)
   console.log('[DM] 动态资料集已注册: id=' + ds.id + ' ' + ds.name + ' baseUri=' + ds.baseUri)
+  // 刷新首页入口清单（审查修复）：global 清单只在 app onCreate 生成一次，
+  // 不刷新则传输完成后首页分类行看不到新集入口（index onInit 会重读 global）
+  try {
+    if (typeof global !== 'undefined') {
+      global.datasetEntries = getDatasetEntries()
+      global.groupEntries = getGroupEntries()
+    }
+  } catch (e) {}
   return ds
 }
 
@@ -181,6 +189,9 @@ async function searchAllAsync(query, options) {
     // ⚠️ 每个集独立超时（v1.16.23）：快应用下 file.readText 回调可能丢失（#18/#84），
     // 单集卡住会让 Promise.all 永久挂起 → 上层页面 loading 恒 true（「一直搜索中」）。
     // 这里给每个集 8s 上限，超时按「该集无结果」处理，不影响其余集。
+    // ⚠️ 超时败者防护（审查修复）：8s race 超时后内层任务仍会继续执行，
+    // 其写入会污染聚合结果——settled 后丢弃
+    var settled = false
     tasks.push(Promise.race([
       (async function() {
       var eng = ensureEngine(ds)
@@ -188,6 +199,7 @@ async function searchAllAsync(query, options) {
     // 调用次数 = 页码」，翻到第 3 页即 6 集×3 = 18 次调用（真机上成倍放大）。
     // 现每集只调用一次、取前 pageSize*page 条，再交由下方全局切片与交错排序。
     var r = await eng.search(query, { page: 1, pageSize: pageSize * page, category: category, region: region })
+    if (settled) return   // 已超时：本集结果作废
     if (r && r.initFailed) initFailed = true
     var items = (r && r.results) || []
     total += (r && r.total) || 0
@@ -224,7 +236,7 @@ async function searchAllAsync(query, options) {
         merged.push(it)
       }
       })(),
-      new Promise(function(resolve) { setTimeout(function() { resolve(null) }, 8000) })
+      new Promise(function(resolve) { setTimeout(function() { settled = true; resolve(null) }, 8000) })
     ]))
    })(i)
   }
@@ -237,11 +249,7 @@ async function searchAllAsync(query, options) {
     return a._dsOrder - b._dsOrder
   })
   var start = (page - 1) * pageSize
-  var cardSize = 'medium'
-  for (var mi = 0; mi < merged.length; mi++) {
-    if (merged[mi].titleSize) { cardSize = merged[mi].titleSize; break }
-  }
-  return { results: merged.slice(start, start + pageSize), total: total, initFailed: initFailed, cardSize: cardSize }
+  return { results: merged.slice(start, start + pageSize), total: total, initFailed: initFailed }
 }
 
 // 全局 ID 取详情（跨集路由）
@@ -346,7 +354,7 @@ async function warmupAllCaches(onProgress) {
       try { onProgress(Math.round(done / DATASETS.length * 100), '预加载资料 · ' + ds.name) } catch (e) {}
     }
   }
-  console.log('[DM] 预热完成 ' + done + '/' + DATASETS.length + ' 集（流式：逐集建缓存逐集释放内存，标记=' + ver + '）')
+  console.log('[DM] 预热完成 ' + done + '/' + DATASETS.length + ' 集（流式：逐集建缓存逐集释放内存）')
   return done
 }
 

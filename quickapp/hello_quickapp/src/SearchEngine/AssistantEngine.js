@@ -79,16 +79,26 @@ Assistant.prototype.probe = function (onReady) {
 }
 
 // 绑定真链路消息（手机 App 的应答）
+// ⚠️ 包装链（审查修复）：BtTransfer（蓝牙资料接收）也在这条通道设 conn.onmessage，
+// 直接赋值会互相覆盖。保留原 handler，非本模块消息转发过去，两模块都能收到。
 Assistant.prototype._bindReal = function (conn) {
   var self = this
+  var prevHandler = conn.onmessage
   conn.onmessage = function (data) {
-    if (!data || !data.data) return
-    var msg = null
-    try { msg = JSON.parse(data.data) } catch (e) { return }
-    if (msg.type === 'voice_result' && self._voiceCb) {
-      self._voiceCb({ ok: true, text: msg.text || '', mode: MODE.REAL })
-    } else if (msg.type === 'ai_result' && self._aiCb) {
-      self._aiCb({ ok: true, answer: msg.answer || '', results: msg.results || [], mode: MODE.REAL })
+    var handled = false
+    if (data && data.data) {
+      var msg = null
+      try { msg = JSON.parse(data.data) } catch (e) { msg = null }
+      if (msg && msg.type === 'voice_result' && self._voiceCb) {
+        self._voiceCb({ ok: true, text: msg.text || '', mode: MODE.REAL })
+        handled = true
+      } else if (msg && msg.type === 'ai_result' && self._aiCb) {
+        self._aiCb({ ok: true, answer: msg.answer || '', results: msg.results || [], mode: MODE.REAL })
+        handled = true
+      }
+    }
+    if (!handled && typeof prevHandler === 'function') {
+      try { prevHandler(data) } catch (e) {}
     }
   }
 }

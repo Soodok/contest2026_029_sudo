@@ -27,7 +27,7 @@
           <text class="search-placeholder" if="{{searchActive && !searchQuery && !voiceActive}}">请输入</text>
           <text class="search-input" if="{{searchActive && searchQuery && !voiceActive}}">{{displayQuery}}</text>
           <text class="clear-btn" if="{{searchActive && searchQuery && !voiceActive}}" @click="clearSearch">✕</text>
-          <text class="voice-text" if="{{voiceActive}}">{{voiceText}}</text>
+          <text class="voice-text" if="{{voiceActive}}">聆听中…</text>
         </div>
 
         <!-- 引导词：非搜索态、非语音态显示 -->
@@ -233,7 +233,7 @@
   .voice-text { font-size: 20px; color: #757575; flex: 1; margin-left: 10px; text-align: left; }
 
   /* 搜索按钮行：矩形左右排列，胶囊/圆形上下排列 */
-  .search-btn-row { width: 100%; margin-top: 86px; flex-direction: row; justify-content: center; align-items: center; margin-top: 20px; padding-left: 10px; padding-right: 10px; flex-shrink: 0; }
+  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 20px; padding-left: 10px; padding-right: 10px; flex-shrink: 0; }
   .search-btn { position: relative; flex: 1; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: flex-start; align-items: center; flex-shrink: 0; padding-left: 14px; }
   .search-btn-l { margin-right: 4px; background-color: #34A853; }
   .search-btn-r { margin-left: 4px; background-color: #2A2A2C; }
@@ -455,9 +455,7 @@
       isClearing: false,
       showEngineTip: false,
       voiceActive: false,
-      voiceText: '请输入',
-      bluetoothConnected: true,
-      voiceTimer: null
+      bluetoothConnected: true
     },
 
     computed: {
@@ -565,7 +563,6 @@
       if (this.catScrollTimer) clearTimeout(this.catScrollTimer)
       if (this.pageScrollTimer) clearTimeout(this.pageScrollTimer)
       if (this.searchTimer) clearTimeout(this.searchTimer)
-      if (this.voiceTimer) clearInterval(this.voiceTimer)
     },
 
     updateTime() {
@@ -591,6 +588,16 @@
           self._fullScreenH = h
           self.screen1H = h
           self.dotsTop = Math.round(h / 2) - 16
+          // ⚠️ 吸附参数随形态（审查修复）：snapParams 基准值是 rect 设计（58/17/8.5），
+          // pill（手环9）实际 cat-item 95px、间距 55、padding 28——用 rect 步长吸附
+          // 图标永远对不到屏幕中心
+          if (shape === 'pill-shaped') {
+            self.snapParams = { iconW: 95, spacing: 55, count: 6, padLeft: 28, enabled: true }
+          } else if (shape === 'circle') {
+            self.snapParams = { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: false }
+          } else {
+            self.snapParams = { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: true }
+          }
           if (self.shouldOpenKeyboard) {
             self.shouldOpenKeyboard = false
             self.openKeyboardDelayed()
@@ -685,6 +692,8 @@
     goSearch() {
       // AI 搜索（v1.16.33）：清掉资料集限定 → 进入 AI 提问模式（键盘输入问题，
       // 收起键盘后由 AssistantEngine 生成本地回答 + 来源列表；真机连手机时走云端应答）
+      // 审查修复：资料视图内点 AI 搜索需先退出视图，否则标题显示「集名搜索」而实际是全库
+      if (this.dsViewActive) this.exitDsView()
       this.activeDatasetId = null
       this.activeGroupId = null
       this._resetSearchFilters()
@@ -703,8 +712,20 @@
       this.checkBluetooth()
       var self = this
       // v1.16.57 清理：删除「随机波形动画」演示代码（无真实音量数据源，凑数渲染）
+      // 超时兜底（审查修复）：真链路手机不回包时，聆听态会无限卡死——12s 自动退出
+      setTimeout(function () {
+        if (self && !self.isDestroyed && self.voiceActive) {
+          self.log('[HOME-SEARCH] 语音识别超时，自动退出聆听', 'warn')
+          self.exitVoiceSearch()
+        }
+      }, 12000)
       getAssistant().recognize(function (r) {
         if (self.isDestroyed || !self.voiceActive) return
+        if (!r || !r.ok || !r.text) {
+          self.log('[HOME-SEARCH] 语音识别失败' + (r && r.reason ? '（' + r.reason + '）' : ''), 'warn')
+          self.exitVoiceSearch()
+          return
+        }
         if (r && r.ok && r.text) {
           self.log('[HOME-SEARCH] 语音识别（' + r.mode + '）：' + r.text)
           // 识别成功：退出聆听态 → 填词 → 走真实搜索
@@ -724,10 +745,6 @@
     // 退出语音聆听态（同时取消在途的识别请求）
     exitVoiceSearch() {
       this.voiceActive = false
-      if (this.voiceTimer) {
-        clearInterval(this.voiceTimer)
-        this.voiceTimer = null
-      }
       getAssistant().cancel()
       this.log('[HOME-SEARCH] 语音搜索结束')
     },
@@ -797,6 +814,7 @@
         this.searched = false
         this.searchError = false
         this.showEngineTip = false
+        this.searchSeq++   // 作废在途搜索（审查修复）
         this.searchActive = true
         this._applySearchLayout(true)
         this.log('[HOME-SEARCH] 进入' + (isGrp ? '大类 ' : '资料集 ') + item.name +
@@ -812,7 +830,7 @@
         }
         return
       }
-      this.enterSearch(item)
+      this.enterSearch()   // 审查修复：未标记项兜底（原传 item 会污染 global.searchCategory）
     },
 
     // 复位全部筛选条件（标签/分类/地区）——否则「点标签筛选 → 退出搜索」会把限定
@@ -897,24 +915,11 @@
 
     // 进入搜索：搜索框/搜索按钮只弹键盘（分类行保留、被键盘盖住，无内容替换切换感）；
     // 分类图标进入则清空词并显示结果区；统一延迟 150ms 弹键盘（先让组件 mount）
-    enterSearch(category) {
+    enterSearch() {
+      // v1.16.58 审查清理：删除 category 参数分支（displayCats 全部带 isGroup/isDataset
+      // 标记已走 goCategory 专用路径，该分支不可达；且传对象会把 item 写进 global.searchCategory）
       if (this._layoutGuard('enterSearch')) return
-      if (category) {
-        global.searchCategory = category
-        this.activeCategory = category
-        this.baseTitle = category + '搜索'
-        // 点分类图标进入：清空旧词重新输入该分类关键词，避免旧结果串分类
-        this.searchQuery = ''
-        global.searchQuery = ''
-        this.displayList = []
-        this.totalCount = 0
-        this.currentPage = 1
-        this.allLoaded = false
-        this.searched = false
-        this.showEngineTip = false
-        this.searchActive = true // 分类进入：显示结果区（空态引导输入）
-        this._applySearchLayout(true)
-      } else {
+      {
         this.activeCategory = 'all'
         // 通用搜索入口：清掉资料集限定（上次进过某资料集后，普通搜索不应仍只搜该集）；
         // 资料视图内例外——保持该集限定、直接进入结果区布局（标题由 headerTitle 标注「集名·搜索」）
@@ -931,7 +936,7 @@
           this._applySearchLayout(this.searchActive)
         }
       }
-      this.log('[HOME-SEARCH] 进入搜索层 词=' + this.searchQuery + ' category=' + (category || 'all'))
+      this.log('[HOME-SEARCH] 进入搜索层 词=' + this.searchQuery)
       // 回滚到顶部
       var pageScrollEl = this.$element('pageScroll')
       if (pageScrollEl) {
@@ -1172,6 +1177,13 @@
           })
         ])
         if (seq !== this.searchSeq) return // 已被更新的搜索取代，丢弃过期结果
+        // 超时兜底提示（审查修复）：区分「真没搜到」与「卡死兜底」
+        if (result && result.timedOut) {
+          this.searchError = true
+          this.loading = false
+          this.log('[HOME-SEARCH] 搜索超时（10s），显示错误提示', 'warn')
+          return
+        }
         // 数据缺失兜底：引擎懒初始化失败（meta 读不到）时提示去设置检查
         if (result.initFailed) {
           this.showEngineTip = true
@@ -1246,6 +1258,8 @@
       this.dsViewActive = true
       this.activeDatasetId = info.id
       this.activeGroupId = null
+      // 作废在途搜索（审查修复）：否则此前 loadPage 的 await 返回后把旧结果写进新视图
+      this.searchSeq++
       // 标签筛选复位（新进资料不预设标签）
       this.activeTag = null
       this.activeRegion = 'all'
@@ -1285,6 +1299,8 @@
     // 退出资料视图，回到分类横滑行
     exitDsView() {
       if (this._layoutGuard('exitDsView')) return
+      // 作废在途搜索（审查修复：防旧结果写回）
+      this.searchSeq++
       this.dsViewActive = false
       this.dsInfo = null
       this.activeTag = null
