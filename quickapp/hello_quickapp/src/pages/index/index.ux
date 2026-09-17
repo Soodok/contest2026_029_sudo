@@ -383,6 +383,7 @@
 <script>
   // 语音搜索 / AI 搜索统一引擎（真链路=interconnect 手机 App；模拟链路=本地可运行模拟源）
   import { getAssistant } from '../../SearchEngine/AssistantEngine.js'
+  import { warmupAllCaches, isWarmupCurrent } from '../../SearchEngine/DatasetManager.js'
   import router from '@system.router'
   import device from '@system.device'
   import prompt from '@system.prompt'
@@ -559,6 +560,26 @@
       })
       this.updateTime()
       this.timeTimer = setInterval(() => { this.updateTime() }, 30000)
+      // 索引预热调度（v1.16.44 主人定案）：应用入口就是本页（无 splash/loading 启动路径），
+      // 标记无效（首次/数据更新/清缓存后）时【后台静默】流式预热全部资料集索引——
+      // 每集建完缓存立即释放该集引擎内存（流式防内存爆炸），完成后写版本标记，
+      // 之后的启动 isWarmupCurrent 命中即整段跳过（零开销）。
+      // 不进 loading 页、延迟 1.5s 启动让首页先渲染；搜索撞上预热中的集安全（_ensureChunk 幂等）。
+      try {
+        var self0 = this
+        setTimeout(function() {
+          if (self0.isDestroyed) return
+          isWarmupCurrent().then(function(current) {
+            if (current) { console.log('[DS] 索引缓存标记有效，跳过预热'); return }
+            console.log('[DS] 后台预热开始（流式逐集建缓存）')
+            warmupAllCaches().then(function(n) {
+              console.log('[DS] 后台预热结束 ' + n + '/' + 6)
+            })
+          })
+        }, 1500)
+      } catch (e) {
+        console.log('[DS] 预热调度异常: ' + e.message)
+      }
     },
 
     // onShow 时 DOM 已 ready，获取屏幕信息做形态/安全偏移适配（仅执行一次）
