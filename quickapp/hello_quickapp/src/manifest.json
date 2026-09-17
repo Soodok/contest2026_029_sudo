@@ -1,8 +1,8 @@
 {
   "package": "vela.Databank",
   "name": "资料库",
-  "versionName": "1.16.66",
-  "versionCode": 116,
+  "versionName": "1.16.67",
+  "versionCode": 117,
   "minPlatformVersion": 1000,
   "icon": "/common/logo.png",
   "deviceTypeList": [
@@ -60,6 +60,9 @@
       },
       "pages/btransfer": {
         "component": "btransfer"
+      },
+      "pages/dataset": {
+        "component": "dataset"
       }
     }
   }

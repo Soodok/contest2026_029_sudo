@@ -1,0 +1,173 @@
+<template>
+  <!-- 资料详情页（v1.16.67 主人定案：从首页内嵌视图独立成页——根治「首页多点
+       条件翻转致塌陷」：独立渲染树与首页搜索态/分类行完全解耦） -->
+  <div class="ds-page" @swipe="onSwipe">
+    <div class="statusbar">
+      <text class="rect-title" if="{{showRectTitle}}">{{dsName}}</text>
+      <div class="sb-block">
+        <text class="time">{{time}}</text>
+        <text class="app-title" if="{{showAppTitle}}">{{dsName}}</text>
+      </div>
+    </div>
+
+    <!-- 搜索入口：点击 → 带「该集限定」回首页搜索态（键盘/结果链路全复用首页） -->
+    <div class="search-box" @click="goSearch">
+      <image class="search-box-icon" src="/common/icons/search.png"></image>
+      <text class="search-placeholder">搜索「{{dsName}}」{{activeTag ? '·' + activeTag : ''}}</text>
+    </div>
+
+    <div class="ds-view">
+      <div class="ds-head">
+        <div class="{{dsIconClass}}">
+          <image class="ds-icon" src="{{dsIcon}}"></image>
+        </div>
+        <text class="ds-name">{{dsName}}</text>
+      </div>
+      <text class="ds-desc">{{dsDesc}}</text>
+      <scroll class="ds-tags-scroll" scroll-x="{{true}}">
+        <div class="ds-tags">
+          <div class="{{$item.cls}}" for="{{dsTags}}" @click="pickTag($item)">
+            <text class="ds-tag-text">{{$item.label}}</text>
+          </div>
+        </div>
+      </scroll>
+    </div>
+
+    <text class="ds-hint">左滑返回 · 点标签筛选</text>
+  </div>
+</template>
+
+<style>
+  .ds-page { width: 100%; height: 100%; background-color: #000000; flex-direction: column; align-items: center; }
+  .statusbar { width: 100%; height: 22px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
+  .rect-title { flex: 1; text-align: center; font-size: 20px; color: #FFFFFF; font-weight: 500; }
+  .sb-block { flex: 1; flex-direction: column; align-items: flex-end; }
+  .time { font-size: 16px; color: #757575; font-weight: 400; }
+  .app-title { font-size: 18px; color: #FFFFFF; font-weight: 500; margin-top: 3px; }
+
+  .search-box { width: 258px; height: 56px; border-radius: 28px; background-color: #1C1C1E; border: 2px solid #3A3A3C; flex-direction: row; justify-content: flex-start; align-items: center; padding-left: 18px; margin-top: 16px; flex-shrink: 0; }
+  .search-box-icon { width: 24px; height: 24px; }
+  .search-placeholder { font-size: 20px; color: #757575; flex: 1; margin-left: 10px; text-align: left; }
+
+  .ds-view { width: 100%; flex-direction: column; align-items: center; flex-shrink: 0; margin-top: 24px; }
+  .ds-head { flex-direction: row; align-items: center; margin-bottom: 8px; }
+  .ds-icon-box { width: 46px; height: 46px; border-radius: 23px; justify-content: center; align-items: center; }
+  .ds-icon { width: 26px; height: 26px; }
+  .ds-name { font-size: 24px; font-weight: 600; color: #FFFFFF; margin-left: 10px; }
+  .ds-desc { width: 88%; font-size: 16px; color: #8E8E93; text-align: center; line-height: 22px; margin-bottom: 10px; }
+  .ds-tags-scroll { width: 100%; height: 46px; flex-shrink: 0; }
+  .ds-tags { flex-direction: row; padding: 0 14px; align-items: center; }
+  .ds-tag { height: 40px; border-radius: 20px; background-color: #1C1C1E; justify-content: center; align-items: center; padding: 0 16px; margin-right: 8px; flex-shrink: 0; }
+  .ds-tag-on { background-color: #4D9FEE; }
+  .ds-tag-text { font-size: 17px; color: #BBBBBB; }
+  .ds-hint { font-size: 14px; color: #5b6472; margin-top: 20px; }
+
+  .ci-ds { background-color: #8B5CF6; }
+  .ci-blue { background-color: #4285F4; }
+  .ci-green { background-color: #34A853; }
+  .ci-cyan { background-color: #24C1E0; }
+  .ci-yellow { background-color: #FBBC05; }
+
+  @media (shape: pill-shaped) {
+    .statusbar { height: 91px; padding-top: 41px; justify-content: center; padding-left: 0; padding-right: 0; }
+    .sb-block { align-items: center; }
+    .time { font-size: 21px; }
+    .app-title { font-size: 22px; }
+    .search-box { width: 246px; height: 92px; border-radius: 46px; margin-top: 20px; border: 3px solid #3A3A3C; padding-left: 30px; }
+    .search-box-icon { width: 40px; height: 40px; }
+    .search-placeholder { font-size: 30px; margin-left: 16px; }
+    .ds-view { margin-top: 10px; }
+    .ds-icon-box { width: 70px; height: 70px; border-radius: 35px; }
+    .ds-icon { width: 42px; height: 42px; }
+    .ds-name { font-size: 36px; }
+    .ds-desc { font-size: 24px; line-height: 34px; margin-bottom: 16px; }
+    .ds-tags-scroll { height: 80px; }
+    .ds-tag { height: 64px; border-radius: 32px; padding: 0 26px; margin-right: 12px; }
+    .ds-tag-text { font-size: 28px; }
+    .ds-hint { font-size: 22px; }
+  }
+</style>
+
+<script>
+  import router from '@system.router'
+  import device from '@system.device'
+
+  function pad2(n) { return n < 10 ? '0' + n : '' + n }
+
+  export default {
+    private: {
+      time: '00:00',
+      dsId: 0,
+      dsName: '',
+      dsDesc: '',
+      dsIcon: '',
+      dsIconClass: 'ds-icon-box ci-ds',
+      dsTags: [],
+      activeTag: null,
+      showRectTitle: false,
+      showAppTitle: true,
+      timeTimer: null,
+      isDestroyed: false
+    },
+
+    onInit() {
+      var target = (typeof global !== 'undefined') ? global.dsViewTarget : null
+      if (!target) { router.back(); return }
+      this.dsId = target
+      var info = (typeof global.getDatasetInfo === 'function') ? global.getDatasetInfo(target) : null
+      if (!info) { router.back(); return }
+      this.dsName = info.name
+      this.dsDesc = info.desc || ''
+      this.dsIcon = info.icon
+      this.dsIconClass = 'ds-icon-box ' + (info.colorClass || 'ci-ds')
+      var tags = []
+      for (var i = 0; i < info.tags.length; i++) {
+        tags.push({ label: info.tags[i].label, value: info.tags[i].value, cls: 'ds-tag' })
+      }
+      this.dsTags = tags
+    },
+
+    onShow() {
+      var self = this
+      this.updateTime()
+      this.timeTimer = setInterval(function() { self.updateTime() }, 30000)
+    },
+
+    onDestroy() {
+      this.isDestroyed = true
+      if (this.timeTimer) { clearInterval(this.timeTimer); this.timeTimer = null }
+    },
+
+    updateTime() {
+      var now = new Date()
+      this.time = pad2(now.getHours()) + ':' + pad2(now.getMinutes())
+    },
+
+    // 点标签：切换选中（蓝色高亮），搜索时作为 region 限定
+    pickTag(tag) {
+      var same = (this.activeTag === tag.value)
+      this.activeTag = same ? null : tag.value
+      var tags = []
+      var src = this.dsTags
+      for (var i = 0; i < src.length; i++) {
+        var on = (src[i].value === this.activeTag)
+        tags.push({ label: src[i].label, value: src[i].value, cls: on ? 'ds-tag ds-tag-on' : 'ds-tag' })
+      }
+      this.dsTags = tags
+    },
+
+    // 搜索：带「该集限定（+标签）」回首页进搜索态——键盘/结果/详情链路全复用首页
+    goSearch() {
+      global.dsSearchTarget = { dsId: this.dsId, region: this.activeTag || 'all' }
+      global.dsViewTarget = this.dsId
+      router.back()
+    },
+
+    // 左滑返回（主人定案的手势返回）
+    onSwipe(eve) {
+      if (eve.direction === 'left' || eve.direction === 'right') {
+        router.back()
+      }
+    }
+  }
+</script>
