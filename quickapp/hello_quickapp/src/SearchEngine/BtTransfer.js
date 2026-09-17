@@ -82,8 +82,27 @@ function handleMessage(data) {
     var ds = receiving.ds
     var name = receiving.name
     var files = receiving.files
+    var declared = receiving.total || 0
     receiving = null
-    _log('接收完成: ' + ds + '，共 ' + Object.keys(files).length + ' 个文件，落盘中…')
+    // ⚠️ 完整性校验（审查修复#4）：interconnect 不保证可靠有序——缺片/缺文件时落盘
+    // 会静默产生坏文件（条目搜不到/详情错乱）。校验不通过则拒绝落盘并告警（请重发）。
+    var names = Object.keys(files)
+    var incomplete = []
+    for (var fi = 0; fi < names.length; fi++) {
+      var rec0 = files[names[fi]]
+      if (!rec0.last) { incomplete.push(names[fi] + '(未收完)'); continue }
+      for (var ci = 0; ci < rec0.got; ci++) {
+        if (rec0.chunks[ci] === undefined) { incomplete.push(names[fi] + '(缺片#' + ci + ')'); break }
+      }
+    }
+    if (declared > 0 && names.length !== declared) {
+      incomplete.push('文件数不符(声明' + declared + '/实收' + names.length + ')')
+    }
+    if (incomplete.length) {
+      _log('资料集 ' + ds + ' 完整性校验失败，拒绝落盘: ' + incomplete.join('、') + '（请重新发送）', 'error')
+      return
+    }
+    _log('接收完成: ' + ds + '，共 ' + names.length + ' 个文件，校验通过，落盘中…')
     var chain = Promise.resolve()
     Object.keys(files).forEach(function(fn) {
       chain = chain.then(function() { return flushFile(ds, fn, files[fn].chunks) })

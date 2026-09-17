@@ -105,7 +105,7 @@
   function loadSettingsAsync() {
     return new Promise(function(resolve) {
       var loaded = 0
-      var total = 7
+      var total = 5   // 实际 storage.get 数（审查修复：v1.16.57 删两个空读后未同步，导致每次启动靠 3s 超时兜底）
       var storage = require('@system.storage')
 
       var checkDone = function() {
