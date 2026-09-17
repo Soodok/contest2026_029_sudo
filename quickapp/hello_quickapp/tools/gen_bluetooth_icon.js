@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// gen_bluetooth_icon.js —— 「蓝牙未连接」图标（v1.16.52 第 5 版，主人定稿方向）
-// 主人描述的结构：①【完整的】暗红色半透明圆底（不被切割）
-//                ② 圆上有一个【红色蓝牙标识】
-//                ③ 标识被一条斜向【留空】切开——缝里透出圆底暗红色（圆底完好，
-//                   「留空」只作用在标识上，不是把整个圆切成两半）
+// gen_bluetooth_icon.js —— 「蓝牙未连接」图标（v1.16.54 第 7 版，逐像素对照实拍）
+// 实拍解构（放大极限核对）：
+//   ① 圆底 = 亮红色实心（#C62828 附近，非暗红、非透明）
+//   ② 符号 = 亮橙红的两截箭头形态——由【深暗红轮廓线】从红底上"刻"出形状
+//   ③ 斜杠 = 深暗红色粗线（#7F1D1D，比圆底暗），斜穿符号中部把符号切成两段
+//      —— 斜杠是"更暗的线"，不是透明缝、也不是底色挖空（前几版方向性错误再次修正）
 // 用法: node tools/gen_bluetooth_icon.js
 // 产出: src/common/icons/bluetooth_off.png（128x128）
 'use strict'
@@ -15,24 +16,28 @@ const { Resvg } = require('@resvg/resvg-js')
 // Material Design 官方 bluetooth 图标 path（24x24）——标准 ᚼ 形
 const BT_PATH = 'M17.71,7.71L12,2h-1v7.59L6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 11,14.41V22h1l5.71,-5.71 -4.3,-4.29 4.3,-4.29z'
 
-const BG = 'rgba(139,20,20,0.5)'   // 暗红半透明圆底（黑底上合成≈深暗红，主人：偏透明）
-const FG = '#FF5252'               // 亮红蓝牙标识（暗底上清晰可辨）
+const BG = '#C62828'   // ① 亮红圆底
+const FG = '#FF6B60'   // ② 亮橙红符号芯（比底亮，照片观感）
+const DK = '#7F1D1D'   // ②③ 深暗红：符号描边 + 断联斜杠
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <defs>
     <clipPath id="circleClip"><circle cx="128" cy="128" r="120"/></clipPath>
-    <!-- 斜缝遮罩：只挖【标识】——白=保留标识，黑斜线=标识上留空的断缝（透出圆底暗红） -->
-    <mask id="slashCut">
-      <rect x="0" y="0" width="256" height="256" fill="#FFFFFF"/>
-      <line x1="26" y1="26" x2="230" y2="230" stroke="#000000" stroke-width="46" stroke-linecap="butt"/>
-    </mask>
+    <clipPath id="symbolClip"><path d="${BT_PATH}" transform="translate(34,29) scale(8.3)"/></clipPath>
   </defs>
-  <!-- ① 完整的暗红半透明圆底（无任何切割） -->
   <circle cx="128" cy="128" r="120" fill="${BG}"/>
   <g clip-path="url(#circleClip)">
-    <!-- ②③ 红色蓝牙标识 + 斜向留空断缝（缝里 = 圆底的暗红） -->
-    <g transform="translate(36.8, 32) scale(8)" fill="${FG}" mask="url(#slashCut)">
+    <!-- 符号描边：深暗红大一圈的符号垫底（形成"深色轮廓刻出符号"效果） -->
+    <g transform="translate(34, 29) scale(8.3)" fill="${DK}">
       <path d="${BT_PATH}"/>
+    </g>
+    <!-- 符号芯：亮橙红（比底亮） -->
+    <g transform="translate(36.8, 32) scale(8)" fill="${FG}">
+      <path d="${BT_PATH}"/>
+    </g>
+    <!-- 断联斜杠：深暗红粗线（比圆底暗）斜穿符号中部，把符号切成两段 -->
+    <g clip-path="url(#symbolClip)">
+      <line x1="30" y1="30" x2="226" y2="226" stroke="${DK}" stroke-width="26" stroke-linecap="butt"/>
     </g>
   </g>
 </svg>`
@@ -40,22 +45,25 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" vi
 const png = new Resvg(svg, { fitTo: { mode: 'width', value: 128 } }).render().asPng()
 const out = path.join(__dirname, '..', 'src', 'common', 'icons', 'bluetooth_off.png')
 fs.writeFileSync(out, png)
-console.log('✅ bluetooth_off.png 第 5 版（' + png.length + 'B，128x128）：完整暗红半透圆底 + 亮红标识 + 标识上留空断缝')
+console.log('✅ bluetooth_off.png 第 7 版（' + png.length + 'B，128x128）：亮红底 + 亮橙红符号(深暗红描边) + 深暗红粗斜杠')
 
 // 黑底三尺寸预览（256 放大核对 / 128 / 80 真机显示尺寸）
 const BT = BT_PATH
-function icon(s) {
+function icon(s, uid) {
   return '<g transform="scale(' + (s / 256) + ')">'
-    + '<defs><clipPath id="cc' + s + '"><circle cx="128" cy="128" r="120"/></clipPath>'
-    + '<mask id="mc' + s + '"><rect width="256" height="256" fill="#fff"/>'
-    + '<line x1="26" y1="26" x2="230" y2="230" stroke="#000" stroke-width="46"/></mask></defs>'
-    + '<circle cx="128" cy="128" r="120" fill="rgba(139,20,20,0.5)"/>'
-    + '<g clip-path="url(#cc' + s + ')"><g mask="url(#mc' + s + ')" transform="translate(36.8,32) scale(8)" fill="#FF5252"><path d="' + BT + '"/></g></g></g>'
+    + '<defs><clipPath id="cc' + uid + '"><circle cx="128" cy="128" r="120"/></clipPath>'
+    + '<clipPath id="sc' + uid + '"><path transform="translate(34,29) scale(8.3)" d="' + BT + '"/></clipPath></defs>'
+    + '<circle cx="128" cy="128" r="120" fill="#C62828"/>'
+    + '<g clip-path="url(#cc' + uid + ')">'
+    + '<g transform="translate(34,29) scale(8.3)" fill="#7F1D1D"><path d="' + BT + '"/></g>'
+    + '<g transform="translate(36.8,32) scale(8)" fill="#FF6B60"><path d="' + BT + '"/></g>'
+    + '<g clip-path="url(#sc' + uid + ')"><line x1="30" y1="30" x2="226" y2="226" stroke="#7F1D1D" stroke-width="26" stroke-linecap="butt"/></g>'
+    + '</g></g>'
 }
 const outer = '<svg xmlns="http://www.w3.org/2000/svg" width="520" height="256" viewBox="0 0 520 256">'
   + '<rect width="520" height="256" fill="#000"/>'
-  + '<g transform="translate(0,0)">' + icon(256) + '</g>'
-  + '<g transform="translate(266,64)">' + icon(128) + '</g>'
-  + '<g transform="translate(420,88)">' + icon(80) + '</g></svg>'
+  + '<g transform="translate(0,0)">' + icon(256, 'a') + '</g>'
+  + '<g transform="translate(266,64)">' + icon(128, 'b') + '</g>'
+  + '<g transform="translate(420,88)">' + icon(80, 'c') + '</g></svg>'
 fs.writeFileSync(path.join(__dirname, '..', '.bt_preview.png'), new Resvg(outer, { fitTo: { mode: 'width', value: 520 } }).render().asPng())
 console.log('  （黑底三尺寸预览: velaPro/.bt_preview.png）')
