@@ -175,28 +175,6 @@
     })
   }
 
-  // 加载名言数据（不阻塞）
-  function loadQuotes() {
-    var file = require('@system.file')
-    file.readText({
-      uri: '/common/quotes.txt',
-      success: function(data) {
-        var lines = data.text.split('\n')
-        global.quotes = lines
-          .filter(function(line) { return line.indexOf('|') !== -1 })
-          .map(function(line) {
-            var parts = line.split('|')
-            return { text: parts[0], author: parts[1] }
-          })
-        global.addRuntimeLog('名言数据加载完成', 'success')
-      },
-      fail: function() {
-        global.quotes = [{ text: '以史为镜，可以知兴替', author: '李世民' }]
-        global.addRuntimeLog('名言数据加载失败，使用默认', 'warn')
-      }
-    })
-  }
-
   // 挂载全局接口（幂等，可在引擎就绪前后多次调用）
   // 引擎就绪后刷新全局量（mapChunkSize / detailChunkSize 在 meta 加载后才准确）。
   // 页面（loading）在 init 成功 / 懒初始化完成后调用它。
@@ -398,7 +376,6 @@
       //    导致 _loadMeta 的 Promise 永不 resolve、页面卡死在 5%。
       //    完整加载统一由 loading.ux 单点触发（对应原 splash 的加载逻辑）。
       loadSettingsAsync().then(function() {
-        loadQuotes()
       })
     }
   }

@@ -84,7 +84,6 @@
           <image class="voice-bt-off" src="/common/icons/bluetooth_off.png" if="{{!bluetoothConnected}}"></image>
           <text class="voice-tip" if="{{!bluetoothConnected}}">蓝牙未连接</text>
           <text class="voice-tip" if="{{bluetoothConnected}}">{{voiceStatusText}}</text>
-          <image class="voice-anim" src="{{voiceWaveSrc}}" if="{{bluetoothConnected}}"></image>
           <div class="voice-cancel" @click="exitVoiceSearch">
             <text class="voice-cancel-text">取消</text>
           </div>
@@ -241,7 +240,6 @@
   .search-icon { width: 21px; height: 21px; margin-right: 5px; flex-shrink: 0; }
   .voice-panel { width: 100%; flex: 1; flex-direction: column; justify-content: center; align-items: center; }
   .voice-tip { font-size: 24px; color: #FFFFFF; margin-bottom: 12px; }
-  .voice-anim { width: 50px; height: 50px; }
   .voice-bt-off { width: 50px; height: 50px; margin-bottom: 12px; }
   .voice-cancel { width: 160px; height: 56px; border-radius: 28px; background-color: #3A3A3C; justify-content: center; align-items: center; margin-top: 30px; }
   .voice-cancel-text { font-size: 24px; color: #FFFFFF; }
@@ -327,7 +325,6 @@
     .search-btn-r { margin-left: 0; }
     .search-icon { width: 34px; height: 34px; margin-right: 10px; }
     .voice-tip { font-size: 36px; margin-bottom: 20px; }
-    .voice-anim { width: 80px; height: 80px; }
     .voice-bt-off { width: 80px; height: 80px; margin-bottom: 20px; }
     .voice-cancel { width: 220px; height: 88px; border-radius: 44px; margin-top: 40px; }
     .voice-cancel-text { font-size: 36px; }
@@ -411,14 +408,6 @@
       catScrollTimer: null,
       pageScrollTimer: null,
       snapParams: { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: true },
-      categories: [
-        { name: '健康', icon: '/common/icons/health.png', colorClass: 'ci-green' },
-        { name: '科学', icon: '/common/icons/science.png', colorClass: 'ci-blue' },
-        { name: '历史', icon: '/common/icons/history.png', colorClass: 'ci-orange' },
-        { name: '生活', icon: '/common/icons/life.png', colorClass: 'ci-cyan' },
-        { name: '急救', icon: '/common/icons/aid.png', colorClass: 'ci-red' },
-        { name: '运动', icon: '/common/icons/sport.png', colorClass: 'ci-yellow' }
-      ],
       displayCats: [],
       // 结果列表渐进显示（v1.16.26）：默认只渲染 5 条，避免一次渲染上百节点拖垮手环
       visibleCount: 5,
@@ -466,9 +455,7 @@
       isClearing: false,
       showEngineTip: false,
       voiceActive: false,
-      voiceFrames: [],
       voiceText: '请输入',
-      voiceLevel: 0,
       bluetoothConnected: true,
       voiceTimer: null
     },
@@ -495,10 +482,6 @@
         if (this.voiceActive) c = 'searchbox-voice'
         if (this.searchQuery) c += ' searchbox-typed'
         return c   // 完整类名（模板纯变量插值，v1.16.48 消除拼接）
-      },
-      // 当前波形帧（随模拟音量变化）
-      voiceWaveSrc() {
-        return '/common/icons/voice_wave_' + (this.voiceLevel + 1) + '.png'
       },
       // v1.16.18：分页指示点由「动态 style + 三元」改为「纯变量类名」
       //（交接块 #82 定稿：模板禁三元、动态 style 清零——否则滚动时反复重算属性，是卡顿来源）
@@ -549,12 +532,10 @@
         console.log('[DS] datasetEntries 异常: ' + e.message)
       }
       // 优先大类入口（≤6 个，真机渲染不卡）；无分组数据回退资料集入口；再回退硬编码分类
+      // 大 类入口（≤6 个，真机渲染不卡）；无分组数据回退资料集入口
       this.displayCats = this.groupEntries.length > 0
         ? this.groupEntries
-        : (this.datasetEntries.length > 0 ? this.datasetEntries : this.categories)
-      this.voiceFrames = [1, 2, 3, 4, 5, 6].map(function(i) {
-        return { src: '/common/icons/voice_wave_' + i + '.png' }
-      })
+        : this.datasetEntries
       this.updateTime()
       this.timeTimer = setInterval(() => { this.updateTime() }, 30000)
       // v1.16.46 主人定案：不在首页后台预热——缓存构建只在加载页单独执行
@@ -721,12 +702,7 @@
       this.log('[HOME-SEARCH] 语音搜索：进入聆听状态')
       this.checkBluetooth()
       var self = this
-      // 模拟音量变化：随机切换波形帧
-      this.voiceTimer = setInterval(function() {
-        if (self && !self.isDestroyed) {
-          self.voiceLevel = Math.floor(Math.random() * 6)
-        }
-      }, 300)
+      // v1.16.57 清理：删除「随机波形动画」演示代码（无真实音量数据源，凑数渲染）
       getAssistant().recognize(function (r) {
         if (self.isDestroyed || !self.voiceActive) return
         if (r && r.ok && r.text) {
