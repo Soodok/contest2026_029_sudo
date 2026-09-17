@@ -85,11 +85,38 @@ function ensureEngine(ds) {
     cloned.cache.keyPrefix = cloned.cache.keyPrefix + '_ds' + ds.id
     cloned.mapCache.keyPrefix = cloned.mapCache.keyPrefix + '_ds' + ds.id
     e.config = cloned
-    e.basePath = '/common/' + ds.folder
+    // 蓝牙动态集在应用沙箱（internal://files/，运行时可写），内置集在 /common/（rpk 只读）
+    e.basePath = ds.baseUri ? ds.baseUri : ('/common/' + ds.folder)
     if (e.basePath.charAt(e.basePath.length - 1) !== '/') e.basePath += '/'
     engines[ds.id] = e
   }
   return engines[ds.id]
+}
+
+// 注册蓝牙传输的动态资料集（v1.16.46）：追加到 DATASETS 后全局生效——
+// searchAllAsync 遍历 DATASETS（搜索可达）、getItemByGlobalId（详情可达）自动覆盖。
+// id 从 100 起避让内置集；重复传输同目录幂等（返回已有项，缓存按版本自动重建）。
+var DYN_ID_BASE = 100
+function registerDynamicDataset(opt) {
+  for (var i = 0; i < DATASETS.length; i++) {
+    if (DATASETS[i].dirName === opt.dirName) return DATASETS[i]
+  }
+  var maxId = DYN_ID_BASE - 1
+  for (var j = 0; j < DATASETS.length; j++) if (DATASETS[j].id > maxId) maxId = DATASETS[j].id
+  var ds = {
+    id: maxId + 1,
+    dirName: opt.dirName,
+    folder: '',
+    baseUri: 'internal://files/datasets/' + opt.dirName + '/',
+    name: opt.name || opt.dirName,
+    tag: opt.name || opt.dirName,
+    icon: '/common/datasets/bt/icon.png',
+    desc: '蓝牙传输资料集',
+    tags: []
+  }
+  DATASETS.push(ds)
+  console.log('[DM] 动态资料集已注册: id=' + ds.id + ' ' + ds.name + ' baseUri=' + ds.baseUri)
+  return ds
 }
 
 // 首页资料入口动态清单：已注册的资料集 = 真实存在的资料（图标/名称/集ID）
@@ -277,13 +304,27 @@ async function clearAllCaches() {
 // 幂等：每次启动都可安全重跑——已有缓存的集快速读入即弃（内存池重建后随实例释放），
 // 缺失的自动补建（自愈，无需任何检查——主人定案：正常情况缓存不会消失）。
 
-async function warmupOne(ds) {
+async function warmupOne(ds, onProgress, keepAlive) {
   var eng = ensureEngine(ds)
   if (!eng.isReady) await eng._lazyInit()
+  if (onProgress) { try { onProgress(30, '读取资料元数据') } catch (e) {} }
   for (var m = 0; m < eng.maps.length; m++) await eng._ensureMap(m)
+  if (onProgress) { try { onProgress(60, '建立检索索引') } catch (e) {} }
   for (var c = 0; c < eng.chunks.length; c++) await eng._ensureChunk(c)
-  // 流式释放：缓存已持久化，实例内存池（loadedMaps/loadedChunks）随实例一起丢弃
-  delete engines[ds.id]
+  if (!keepAlive) {
+    // 流式释放：缓存已持久化，实例内存池（loadedMaps/loadedChunks）随实例一起丢弃
+    delete engines[ds.id]
+  }
+  if (onProgress) { try { onProgress(95, '完成') } catch (e) {} }
+}
+
+// 单集预热（蓝牙传输唤醒，v1.16.46）：loading 页只给传输来的文件建缓存。
+// keepAlive=保留引擎实例（用户接下来就会搜它，不必重建）
+function warmupSingle(dsId, onProgress) {
+  var ds = null
+  for (var i = 0; i < DATASETS.length; i++) if (DATASETS[i].id === dsId) { ds = DATASETS[i]; break }
+  if (!ds) return Promise.reject(new Error('资料集不存在: ' + dsId))
+  return warmupOne(ds, onProgress, true)
 }
 
 async function warmupAllCaches(onProgress) {
@@ -323,4 +364,4 @@ function getDatasetInfo(dsId) {  for (var i = 0; i < DATASETS.length; i++) {
   return null
 }
 
-export { DATASETS, ensureEngine, searchAllAsync, getItemByGlobalId, encodeGlobalId, decodeGlobalId, getDatasetEntries, getGroupEntries, getDatasetIdsByGroup, clearAllCaches, getDatasetInfo, warmupAllCaches, GROUP_MAP }
+export { DATASETS, ensureEngine, searchAllAsync, getItemByGlobalId, encodeGlobalId, decodeGlobalId, getDatasetEntries, getGroupEntries, getDatasetIdsByGroup, clearAllCaches, getDatasetInfo, warmupAllCaches, registerDynamicDataset, warmupSingle, GROUP_MAP }

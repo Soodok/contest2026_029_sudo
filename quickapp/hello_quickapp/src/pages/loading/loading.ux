@@ -65,7 +65,7 @@
 <script>
   import router from '@system.router'
   import { getSearchEngine } from '../../SearchEngine/SearchEngine.js'
-  import { warmupAllCaches } from '../../SearchEngine/DatasetManager.js'
+  import { warmupAllCaches, warmupSingle } from '../../SearchEngine/DatasetManager.js'
 
   export default {
     private: {
@@ -84,6 +84,11 @@
 
     onInit(query) {
       this.fromSettings = !!(query && query.source === 'settings')
+      // 蓝牙传输唤醒（v1.16.46）：source=bt 时只给传输来的那一个资料集建缓存，
+      // 不跑历史集完整 init、不跑全量预热（主人定案：只加载蓝牙所传输的文件）
+      this.btMode = !!(query && query.source === 'bt' && query.dsId)
+        ? { dsId: parseInt(query.dsId, 10) }
+        : null
       this.startTime = Date.now()
       this.status = 'loading'
       this.progressPercent = 0
@@ -106,10 +111,11 @@
       if (this.timer) clearTimeout(this.timer)
     },
 
-    // 启动完整加载：引擎单例 + 进度回调
+    // 启动完整加载：引擎单例 + 进度回调；蓝牙唤醒时走单集模式
     async startLoad() {
       var self = this
       if (self.isDestroyed) return
+      if (self.btMode) return self.startBtLoad()
       try {
         var engine = getSearchEngine()
         // 历史集完整初始化占进度前 70%
@@ -141,6 +147,23 @@
       } catch (e) {
         if (self.isDestroyed) return
         self.onError('数据加载异常：' + (e && e.message ? e.message : '未知错误'))
+      }
+    },
+
+    // 蓝牙传输唤醒（v1.16.46）：只对传输来的资料集建缓存（单集模式）
+    async startBtLoad() {
+      var self = this
+      try {
+        self.message = '加载蓝牙资料…'
+        await warmupSingle(self.btMode.dsId, function(p, msg) {
+          self.onProgress(p || 0, msg)
+        })
+        if (self.isDestroyed) return
+        if (typeof global.refreshEngineGlobals === 'function') global.refreshEngineGlobals()
+        self.onSuccess()
+      } catch (e) {
+        if (self.isDestroyed) return
+        self.onError('蓝牙资料加载失败：' + (e && e.message ? e.message : '未知错误'))
       }
     },
 

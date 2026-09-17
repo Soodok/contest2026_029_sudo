@@ -40,6 +40,12 @@ const ICONS = {
   <polyline points="56,130 128,62 200,130" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="76" y="126" width="104" height="74" ${S}/>
   <rect x="112" y="154" width="32" height="46" fill="#FFFFFF"/>`,
+  // 蓝牙动态集：下载箭头入托盘（蓝牙传输的资料统一用此图标）
+  bt: `
+  <line x1="128" y1="54" x2="128" y2="118" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+  <polyline points="96,88 128,120 160,88" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M60 140 L60 178 Q128 208 196 178 L196 140" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="128" y1="186" x2="128" y2="160" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round"/>`,
   // 学习：学士帽（菱形帽面 + 帽基 + 垂穗）
   study: `
   <polygon points="128,58 212,98 128,138 44,98" fill="#FFFFFF"/>
@@ -54,7 +60,8 @@ const DATASETS = [
   { stem: 'english', bg: '#5DBB6C' },
   { stem: 'health', bg: '#8B5CF6' },
   { stem: 'life', bg: '#EA4335' },
-  { stem: 'study', bg: '#24C1E0' }
+  { stem: 'study', bg: '#24C1E0' },
+  { stem: 'bt', bg: '#3D7BFF' }
 ]
 
 function renderIconSvg(stem, bg) {

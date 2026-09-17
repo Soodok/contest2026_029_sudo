@@ -4,6 +4,7 @@
   // 应用版本（与 src/manifest.json 的 versionName 保持同步——改版本时两处一起改）
   const APP_VERSION = '1.16.34'
   import { searchAllAsync, getItemByGlobalId, getDatasetEntries, getGroupEntries, getDatasetInfo } from './SearchEngine/DatasetManager.js'
+  import { initBtReceiver } from './SearchEngine/BtTransfer.js'
 
   // ========== 日志系统（直接操作 storage）==========
   var LOG_KEY = 'app_runtime_logs'
@@ -372,6 +373,9 @@
       }
       // 资料详情视图数据源（index 页不直接 import 库模块——webpack 双路径双实例坑）
       global.getDatasetInfo = getDatasetInfo
+      // 蓝牙资料接收器（v1.16.46 应用级全局监听）：手机端经 interconnect 分片传输资料集，
+      // ds-end 收齐后自动注册并唤醒 loading 页只对该集建缓存。模拟器/无蓝牙环境静默。
+      try { initBtReceiver() } catch (e) { console.log('[APP-DS] 蓝牙接收器启动失败: ' + e.message) }
       try {
         global.groupEntries = getGroupEntries()
       } catch (e) {

@@ -383,7 +383,6 @@
 <script>
   // 语音搜索 / AI 搜索统一引擎（真链路=interconnect 手机 App；模拟链路=本地可运行模拟源）
   import { getAssistant } from '../../SearchEngine/AssistantEngine.js'
-  import { warmupAllCaches } from '../../SearchEngine/DatasetManager.js'
   import router from '@system.router'
   import device from '@system.device'
   import prompt from '@system.prompt'
@@ -560,21 +559,8 @@
       })
       this.updateTime()
       this.timeTimer = setInterval(() => { this.updateTime() }, 30000)
-      // 索引预热调度（v1.16.45 主人定案）：应用入口就是本页，启动【永远直接主界面，
-      // 不弹任何加载页】。预热无条件后台幂等执行（不做任何检查——正常情况缓存不会
-      // 消失；若被吞，预热自动补建自愈）：流式逐集建缓存、每集建完立即释放该集内存。
-      // 延迟 1.5s 让首页先渲染；搜索撞上预热中的集安全（_ensureChunk 幂等）。
-      try {
-        var self0 = this
-        setTimeout(function() {
-          if (self0.isDestroyed) return
-          warmupAllCaches().then(function(n) {
-            console.log('[DS] 后台预热结束 ' + n + '/6')
-          })
-        }, 1500)
-      } catch (e) {
-        console.log('[DS] 预热调度异常: ' + e.message)
-      }
+      // v1.16.46 主人定案：不在首页后台预热——缓存构建只在加载页单独执行
+      //（常规触发=设置页「重新加载」；蓝牙传输完成由 BtTransfer 自动唤醒 loading 单集加载）
     },
 
     // onShow 时 DOM 已 ready，获取屏幕信息做形态/安全偏移适配（仅执行一次）
