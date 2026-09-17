@@ -65,6 +65,7 @@
 <script>
   import router from '@system.router'
   import { getSearchEngine } from '../../SearchEngine/SearchEngine.js'
+  import { warmupAllCaches } from '../../SearchEngine/DatasetManager.js'
 
   export default {
     private: {
@@ -111,8 +112,9 @@
       if (self.isDestroyed) return
       try {
         var engine = getSearchEngine()
+        // 历史集完整初始化占进度前 70%
         var success = await engine.init('/common/', function(percent, message) {
-          self.onProgress(percent, message)
+          self.onProgress(Math.round(percent * 0.7), message)
         })
         if (self.isDestroyed) return
         if (success) {
@@ -124,6 +126,14 @@
           // 而历史集真实值是 mapChunkSize=600 / detailChunkSize=150 —— 不刷新会导致
           // 详情页按错误分片取数（读到别的条目或报「未找到数据」）。
           if (typeof global.refreshEngineGlobals === 'function') global.refreshEngineGlobals()
+          // 资料集索引预热占进度后 30%（v1.16.43 主人定案）：把 6 个资料集的
+          // map+chunk 全部建好 storage 缓存——此前它们懒创建，总搜索第一次要同时
+          // 冷启动 5 个集（读块文件+写缓存）= 搜索非常慢的主因。预热后搜索直读缓存。
+          self.message = '预加载资料…'
+          await warmupAllCaches(function(p, msg) {
+            self.onProgress(70 + Math.round((p || 0) * 0.3), msg)
+          })
+          if (self.isDestroyed) return
           self.onSuccess()
         } else {
           self.onError('数据加载失败，请重试')

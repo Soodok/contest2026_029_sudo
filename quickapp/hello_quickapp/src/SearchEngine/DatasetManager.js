@@ -267,10 +267,40 @@ async function clearAllCaches() {
   return { datasets: DATASETS.length, cleared: ok, keys: keys }
 }
 
+// 全量预热（v1.16.43 主人定案）：进入应用时把全部资料集的索引（map+chunk）建好 storage
+// 缓存——此前资料 5 集的引擎是懒创建（首次搜到该集才读块文件+写缓存），总搜索第一次
+// 要同时冷启动 5 个集 = 「总搜索栏搜索非常慢」的主因。预热走 _ensureMap/_ensureChunk
+//（无 init 的 sleep），缓存已存在（版本匹配）时只是读入，很快。
+// 串行逐集执行（避免并发抢 I/O）；单集 20s 上限，失败/超时跳过——搜索路径懒加载天然兜底。
+async function warmupAllCaches(onProgress) {
+  var done = 0
+  for (var i = 0; i < DATASETS.length; i++) {
+    var ds = DATASETS[i]
+    try {
+      await Promise.race([
+        (async function() {
+          var eng = ensureEngine(ds)
+          if (!eng.isReady) await eng._lazyInit()
+          for (var m = 0; m < eng.maps.length; m++) await eng._ensureMap(m)
+          for (var c = 0; c < eng.chunks.length; c++) await eng._ensureChunk(c)
+        })(),
+        new Promise(function(r) { setTimeout(r, 20000) })
+      ])
+    } catch (e) {
+      console.log('[DM] 预热跳过 ds=' + ds.id + ': ' + (e && e.message ? e.message : '未知'))
+    }
+    done++
+    if (typeof onProgress === 'function') {
+      try { onProgress(Math.round(done / DATASETS.length * 100), '预加载资料 · ' + ds.name) } catch (e) {}
+    }
+  }
+  console.log('[DM] 预热完成 ' + done + '/' + DATASETS.length + ' 集（索引缓存就绪，搜索直读缓存）')
+  return done
+}
+
 // 取资料集展示信息（图标/名称/简介/标签）——供首页「资料详情视图」使用
 // tags 的 cls 在此预拼（选中态由 pickTag 重设），模板只做纯变量插值
-function getDatasetInfo(dsId) {
-  for (var i = 0; i < DATASETS.length; i++) {
+function getDatasetInfo(dsId) {  for (var i = 0; i < DATASETS.length; i++) {
     var ds = DATASETS[i]
     if (ds.id !== dsId) continue
     var tags = []
@@ -283,4 +313,4 @@ function getDatasetInfo(dsId) {
   return null
 }
 
-export { DATASETS, ensureEngine, searchAllAsync, getItemByGlobalId, encodeGlobalId, decodeGlobalId, getDatasetEntries, getGroupEntries, getDatasetIdsByGroup, clearAllCaches, getDatasetInfo, GROUP_MAP }
+export { DATASETS, ensureEngine, searchAllAsync, getItemByGlobalId, encodeGlobalId, decodeGlobalId, getDatasetEntries, getGroupEntries, getDatasetIdsByGroup, clearAllCaches, getDatasetInfo, warmupAllCaches, GROUP_MAP }
