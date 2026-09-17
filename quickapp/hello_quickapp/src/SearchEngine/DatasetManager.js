@@ -2,7 +2,7 @@
 // 架构见 docs/2026-09-05-资料集模块化规范v1.md
 // 每个资料集一个 SearchEngine 实例（零改动复用已验证的单集逻辑），
 // 全局 ID = (datasetId << 20) | localId
-import { SearchEngine, CACHE_VERSION } from './SearchEngine.js'
+import { SearchEngine } from './SearchEngine.js'
 
 // 资料集注册清单（内置集；蓝牙动态集由手机端下发清单后追加到 DYNAMIC_DATASETS）
 console.log('[DM] module evaluating')
@@ -263,45 +263,36 @@ async function clearAllCaches() {
 
   // 丢弃内存引擎池：下次搜索/加载按当前数据文件重建缓存
   engines = {}
-  // 清缓存必须同时清预热标记：否则下次启动 isWarmupCurrent 误判「索引缓存齐全」
-  // 而实际缓存已被清空（首搜全部走文件冷读）
-  try {
-    require('@system.storage').delete({ key: WARMUP_FLAG })
-  } catch (e) {}
   console.log('[DM] clearAllCaches: 已清理 ' + ok + '/' + DATASETS.length + ' 个数据集，共 ' + keys + ' 个键位（预热标记已清除）')
   return { datasets: DATASETS.length, cleared: ok, keys: keys }
 }
 
-// 全量预热（v1.16.43 主人定案，v1.16.44 按主人修正改为流式+标记）：
+// 全量预热（v1.16.43 主人定案，v1.16.44 流式化 + 无条件幂等）：
 // 把全部资料集的索引（map+chunk）建好 storage 缓存——此前资料 5 集引擎懒创建
 //（首次搜到该集才读块文件+写缓存），总搜索第一次要同时冷启动 5 个集 = 慢的根因。
 // ⚠️ 流式约束（主人强调）：手环内存小，禁止 6 集索引同时驻留内存——
 // 串行逐集建立，每集建完【立即丢弃该集引擎实例】（内存池随实例释放）再建下一集，
 // 只保留 storage 持久缓存；下次搜索 ensureEngine 重建实例，从缓存直读（快）。
 // 单集 20s 上限，失败/超时跳过——搜索路径懒加载天然兜底。
-// 完成后写标记 warmup_done=cache.version：后续启动 isWarmupCurrent() 命中即整段跳过，
-// 不再有预热开销（数据更新/清缓存后版本不符或标记被删 → 自动重新预热）。
-var WARMUP_FLAG = 'warmup_done'
+// 幂等：每次启动都可安全重跑——已有缓存的集快速读入即弃（内存池重建后随实例释放），
+// 缺失的自动补建（自愈，无需任何检查——主人定案：正常情况缓存不会消失）。
 
 async function warmupOne(ds) {
   var eng = ensureEngine(ds)
   if (!eng.isReady) await eng._lazyInit()
   for (var m = 0; m < eng.maps.length; m++) await eng._ensureMap(m)
   for (var c = 0; c < eng.chunks.length; c++) await eng._ensureChunk(c)
-  var ver = CACHE_VERSION
   // 流式释放：缓存已持久化，实例内存池（loadedMaps/loadedChunks）随实例一起丢弃
   delete engines[ds.id]
-  return ver
 }
 
 async function warmupAllCaches(onProgress) {
   var done = 0
-  var ver = null
   for (var i = 0; i < DATASETS.length; i++) {
     var ds = DATASETS[i]
     try {
       await Promise.race([
-        (async function() { ver = await warmupOne(ds) })(),
+        (async function() { await warmupOne(ds) })(),
         new Promise(function(r) { setTimeout(r, 20000) })
       ])
     } catch (e) {
@@ -312,31 +303,10 @@ async function warmupAllCaches(onProgress) {
       try { onProgress(Math.round(done / DATASETS.length * 100), '预加载资料 · ' + ds.name) } catch (e) {}
     }
   }
-  if (ver !== null) {
-    try {
-      var storage = require('@system.storage')
-      storage.set({ key: WARMUP_FLAG, value: String(ver) })
-    } catch (e) {}
-  }
   console.log('[DM] 预热完成 ' + done + '/' + DATASETS.length + ' 集（流式：逐集建缓存逐集释放内存，标记=' + ver + '）')
   return done
 }
 
-// 预热标记是否对应当前数据版本（true=索引缓存齐全，启动可整段跳过预热）
-function isWarmupCurrent() {
-  return new Promise(function(resolve) {
-    try {
-      var cur = String(CACHE_VERSION || '')
-      if (cur === '') { resolve(false); return }
-      var storage = require('@system.storage')
-      storage.get({
-        key: WARMUP_FLAG,
-        success: function(data) { resolve(String(data) === cur) },
-        fail: function() { resolve(false) }
-      })
-    } catch (e) { resolve(false) }
-  })
-}
 
 // 取资料集展示信息（图标/名称/简介/标签）——供首页「资料详情视图」使用
 // tags 的 cls 在此预拼（选中态由 pickTag 重设），模板只做纯变量插值
@@ -353,4 +323,4 @@ function getDatasetInfo(dsId) {  for (var i = 0; i < DATASETS.length; i++) {
   return null
 }
 
-export { DATASETS, ensureEngine, searchAllAsync, getItemByGlobalId, encodeGlobalId, decodeGlobalId, getDatasetEntries, getGroupEntries, getDatasetIdsByGroup, clearAllCaches, getDatasetInfo, warmupAllCaches, isWarmupCurrent, GROUP_MAP }
+export { DATASETS, ensureEngine, searchAllAsync, getItemByGlobalId, encodeGlobalId, decodeGlobalId, getDatasetEntries, getGroupEntries, getDatasetIdsByGroup, clearAllCaches, getDatasetInfo, warmupAllCaches, GROUP_MAP }
