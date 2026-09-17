@@ -168,6 +168,7 @@ async function searchAllAsync(query, options) {
   var merged = []
   var total = 0
   var initFailed = false
+  var allLoaded = true   // v1.16.60：各集渐进式 map 加载全部完成的 AND（翻页到底判定）
 
   // 各集搜索并行发起（此前串行 await 24 次，首次搜索还要逐集懒初始化 → 明显卡顿）
   var tasks = []
@@ -201,6 +202,7 @@ async function searchAllAsync(query, options) {
     var r = await eng.search(query, { page: 1, pageSize: pageSize * page, category: category, region: region })
     if (settled) return   // 已超时：本集结果作废
     if (r && r.initFailed) initFailed = true
+    if (!(r && r.allLoaded)) allLoaded = false
     var items = (r && r.results) || []
     total += (r && r.total) || 0
     var card = (eng.display && eng.display.card) || null
@@ -249,7 +251,7 @@ async function searchAllAsync(query, options) {
     return a._dsOrder - b._dsOrder
   })
   var start = (page - 1) * pageSize
-  return { results: merged.slice(start, start + pageSize), total: total, initFailed: initFailed }
+  return { results: merged.slice(start, start + pageSize), total: total, initFailed: initFailed, allLoaded: allLoaded }
 }
 
 // 全局 ID 取详情（跨集路由）

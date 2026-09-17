@@ -151,6 +151,7 @@ class SearchEngine {
     this._cachedMaps = {}   // 记录哪些 Map 已有缓存
     
     // 运行状态
+    this._searchState = null   // 渐进式 map 加载状态（v1.16.60：同 query 复用候选/已加载进度）
     this.isReady = false
     this.basePath = ''
     // 懒初始化：首次搜索自动建立缓存（meta/年份索引 + 按需块缓存），
@@ -1306,7 +1307,13 @@ async _checkAllMapsCache() {
         candidateIds = candidateIds.slice(0, MAX_CANDIDATES)
       }
       
-      // 统计Map分布
+      // ===== 渐进式 map 加载（v1.16.60 主人优化）=====
+      // 读完 block 求交得全部候选 id 后：
+      //   ① 按候选的 map 归属统计落点，map 按命中数降序排行（mapRank）
+      //   ② 首轮只加载【命中前 2 的 map】立即返回——读出来多少先显示多少（不凑满页）
+      //   ③ 翻页（page 增大）时逐次多加载一个 map 再切片 =「点一次显示更多、读一次 map」
+      //   total = 候选总数（block 求交已是全量命中，无需读 map 即可知）
+      //   ④ 同 query 复用 _searchState（候选/mapRank/已加载进度），不重复求交
       var t1 = Date.now()
       var mapDistribution = {}
       var idsInMap = {}
@@ -1321,94 +1328,82 @@ async _checkAllMapsCache() {
         mapDistribution[mapId]++
         idsInMap[mapId].push(id)
       }
+      var mapRank = Object.keys(mapDistribution).map(Number)
+        .sort(function(a, b) { return mapDistribution[b] - mapDistribution[a] })
       stepTimings['1_统计Map分布'] = Date.now() - t1
-      
-      var t2 = Date.now()
-      var primaryMapId = -1
-      var maxCount = 0
-      for (var mapId in mapDistribution) {
-        if (mapDistribution[mapId] > maxCount) {
-          maxCount = mapDistribution[mapId]
-          primaryMapId = parseInt(mapId)
+
+      if (mapRank.length === 0) {
+        return { results: [], total: 0, allLoaded: true }
+      }
+
+      // 状态缓存：同 query+筛选条件复用（新搜索词到来时整体重建）
+      var queryKey = trimmed + '|' + category + '|' + region
+      var st = this._searchState
+      var filtering = (region !== 'all' || category !== 'all')
+      // 筛选激活时禁用渐进（未读 map 无法筛选）——直接标记"全部加载"走全量读
+      if (!st || st.key !== queryKey) {
+        var candidateTotal = 0
+        for (var mk in idsInMap) candidateTotal += idsInMap[mk].length
+        st = this._searchState = {
+          key: queryKey,
+          idsInMap: idsInMap,
+          mapRank: mapRank,
+          loadedMaps: {},
+          loadedCount: 0,
+          rows: [],            // [{id, mapId}] 已加载且通过筛选的行（map 排行序）
+          candidateTotal: candidateTotal,
+          forceAll: filtering
         }
       }
-      stepTimings['2_选择目标Map'] = Date.now() - t2
-      
-      if (primaryMapId === -1) {
-        return { results: [], total: 0 }
-      }
-      
+
+      // 逐 map 加载：首轮至少 2 个；后续按 page 需求追加；筛选模式一次性全部
       var t3 = Date.now()
-      var primaryMap = await this._ensureMap(primaryMapId)
-      if (!primaryMap) {
-        return { results: [], total: 0 }
+      var need = page * pageSize
+      var minMaps = st.forceAll ? st.mapRank.length : 2
+      while (st.loadedCount < st.mapRank.length &&
+             (st.loadedCount < minMaps || st.rows.length < need)) {
+        await this._loadNextMapIntoState(st, category, region, filtering)
       }
-      stepTimings['3_加载Map_' + primaryMapId] = Date.now() - t3
-      
-      var t4 = Date.now()
-      var targetIds = idsInMap[primaryMapId] || []
-      var filteredIds = []
-      
-      if (region !== 'all' || category !== 'all') {
-        for (var i = 0; i < targetIds.length; i++) {
-          var id = targetIds[i]
-          var info = this._getMapInfoByIdSync(primaryMapId, id)
-          if (!info) continue
-          
-          var pass = true
-          if (region !== 'all' && this.regionList[info.regionId] !== region) pass = false
-          // ⚠️ category 筛选依赖 loadDetail（当前为空实现恒 undefined → 恒 pass=false），
-          // 且资料集 categoryList 为空；categoryList 非空（历史集）才启用该过滤
-          if (category !== 'all' && this.categoryList.length > 0) {
-            var detail = await this.loadDetail(id)
-            if (!detail || this.categoryList[detail.categoryId] !== category) pass = false
-          }
-          if (pass) filteredIds.push(id)
-        }
-      } else {
-        filteredIds = targetIds.slice()
-      }
-      stepTimings['4_筛选'] = Date.now() - t4
-      
+      stepTimings['2_加载Map' + st.loadedCount + '个'] = Date.now() - t3
+
+      // 切片：从已加载行按页取（map 排行序稳定，翻页只追加不重排）
       var t5 = Date.now()
-      var total = filteredIds.length
+      var total = st.candidateTotal
       var start = (page - 1) * pageSize
-      var end = Math.min(start + pageSize, total)
+      var end = Math.min(start + pageSize, st.rows.length)
       var results = []
-      
-      var idToIndex = {}
-      for (var idx = 0; idx < primaryMap.ids.length; idx++) {
-        idToIndex[primaryMap.ids[idx]] = idx
-      }
-      
       for (var i = start; i < end; i++) {
-        var id = filteredIds[i]
-        var index = idToIndex[id]
-        if (index === undefined) continue
-        
+        var r = st.rows[i]
+        var map = this.mapData[r.mapId]
+        // 缓存被清（清缓存/新搜索）后自愈：重载该 map
+        if (!map) map = await this._ensureMap(r.mapId)
+        if (!map) continue
+        var index = map.idToIndex ? map.idToIndex[r.id] : -1
+        if (index === undefined || index === -1) continue
         results.push({
-          _id: id,
-          id: id,
-          year: primaryMap.years[index],
-          yearDisplay: this._formatYearDisplay(primaryMap.years[index]),
-          regionId: primaryMap.regionIds[index],
-          region: this.regionList[primaryMap.regionIds[index]] || '未知',
+          _id: r.id,
+          id: r.id,
+          year: map.years[index],
+          yearDisplay: this._formatYearDisplay(map.years[index]),
+          regionId: map.regionIds[index],
+          region: this.regionList[map.regionIds[index]] || '未知',
           categoryId: -1,
           category: '未知',
-          title: primaryMap.titles[index],
+          title: map.titles[index],
           keywords: null,
           cause: null,
           impact: null
         })
       }
       stepTimings['5_构建结果'] = Date.now() - t5
-      
+      var allLoaded = st.loadedCount >= st.mapRank.length
+
       var elapsed = Date.now() - startTime
       stepTimings['总耗时'] = elapsed + 'ms'
       
       // 直接输出到日志界面
       if (typeof global !== 'undefined' && global.addRuntimeLog) {
-        var logMsg = '搜索完成: ' + results.length + '/' + total + ' 条, 耗时分解: '
+        var logMsg = '搜索完成: ' + results.length + '/' + total + ' 条(已载map ' + st.loadedCount + '/' + st.mapRank.length + '), 耗时分解: '
         var parts = []
         for (var key in stepTimings) {
           parts.push(key + '=' + stepTimings[key])
@@ -1416,13 +1411,45 @@ async _checkAllMapsCache() {
         global.addRuntimeLog(logMsg + parts.join(' | '), 'success')
       }
       
-      return { results: results, total: total }
+      return { results: results, total: total, allLoaded: allLoaded }
       
     } catch(e) {
       if (typeof global !== 'undefined' && global.addRuntimeLog) {
         global.addRuntimeLog('搜索异常: ' + e.message, 'error')
       }
-      return { results: [], total: 0 }
+      return { results: [], total: 0, allLoaded: true }
+    }
+  }
+
+  // 渐进加载：把 mapRank 中的下一个 map 读入并收集其命中行到 st.rows
+  // （v1.16.60：翻页逐 map 加载的核心；map 内预建 idToIndex 加速定位）
+  async _loadNextMapIntoState(st, category, region, filtering) {
+    var mapId = st.mapRank[st.loadedCount]
+    if (mapId === undefined) return
+    st.loadedCount++          // 先占位（失败也推进，避免死循环）
+    st.loadedMaps[mapId] = true
+    var map = await this._ensureMap(mapId)
+    if (!map) return
+    if (!map.idToIndex) {
+      var idxMap = {}
+      for (var k = 0; k < map.ids.length; k++) idxMap[map.ids[k]] = k
+      map.idToIndex = idxMap
+    }
+    var ids = st.idsInMap[mapId] || []
+    for (var i = 0; i < ids.length; i++) {
+      var id = ids[i]
+      var index = map.idToIndex[id]
+      if (index === undefined) continue
+      if (filtering) {
+        var pass = true
+        if (region !== 'all' && this.regionList[map.regionIds[index]] !== region) pass = false
+        if (pass && category !== 'all' && this.categoryList.length > 0) {
+          var detail = await this.loadDetail(id)
+          if (!detail || this.categoryList[detail.categoryId] !== category) pass = false
+        }
+        if (!pass) continue
+      }
+      st.rows.push({ id: id, mapId: mapId })
     }
   }
   

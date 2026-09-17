@@ -563,6 +563,7 @@
       if (this.catScrollTimer) clearTimeout(this.catScrollTimer)
       if (this.pageScrollTimer) clearTimeout(this.pageScrollTimer)
       if (this.searchTimer) clearTimeout(this.searchTimer)
+      if (this._emptyExitTimer) clearTimeout(this._emptyExitTimer)
     },
 
     updateTime() {
@@ -919,6 +920,8 @@
       // v1.16.58 审查清理：删除 category 参数分支（displayCats 全部带 isGroup/isDataset
       // 标记已走 goCategory 专用路径，该分支不可达；且传对象会把 item 写进 global.searchCategory）
       if (this._layoutGuard('enterSearch')) return
+      // v1.16.60：取消待执行的空词自动退出（防「退出中又点搜索框」的状态竞态）
+      if (this._emptyExitTimer) { clearTimeout(this._emptyExitTimer); this._emptyExitTimer = null }
       {
         this.activeCategory = 'all'
         // 通用搜索入口：清掉资料集限定（上次进过某资料集后，普通搜索不应仍只搜该集）；
@@ -1128,15 +1131,24 @@
         this.currentPage = 1
         this.allLoaded = false
         this.searched = false
-        // ⚠️ 空词收键盘【不退出搜索态】（v1.16.40 防塌陷）：主人实测「搜索栏连点两次就塌」——
-        // 连点第2下=收键盘→走这里，若置 searchActive=false 会与第1下的进入翻转在半秒内
-        // 连续翻转 7 个条件节点两次，轻量运行时 DOM 重排竞态 → 界面塌陷。
-        // 保持 searchActive 现状（ds 视图留在搜索空态「输入关键词开始搜索」，主路径本就 false），
-        // 退出搜索只走右滑 exitSearch / ✕ clearSearch 两个明确途径。
-        // 作废在途搜索并复位加载/错误态，避免旧请求结果稍后写回空列表
-        this.searchSeq++
+        // 空词收键盘 → 自动退回（v1.16.60 主人需求）：资料视图内回资料视图、主搜索回主页。
+        // ⚠️ 延迟 300ms 执行：与进入搜索的布局翻转错开（防「连点搜索栏」两轮翻转在半秒内
+        // 连续发生 → 轻量运行时 DOM 重排塌陷，v1.16.39/40 的教训）；期间若重新开键盘或
+        // 输入词则取消退出。
+        this.searchSeq++      // 作废在途搜索
         this.loading = false
         this.searchError = false
+        var self = this
+        if (this._emptyExitTimer) clearTimeout(this._emptyExitTimer)
+        this._emptyExitTimer = setTimeout(function() {
+          self._emptyExitTimer = null
+          if (self.isDestroyed) return
+          if (self.searchQuery && self.searchQuery.trim()) return   // 期间又输入了
+          if (self.showKeyboard) return                             // 期间又开键盘了
+          if (!self.searchActive) return
+          self.log('[HOME-SEARCH] 空词收键盘，自动退回')
+          self.exitSearch()
+        }, 300)
         return
       }
       this.currentPage = 1
@@ -1227,7 +1239,9 @@
         this.totalCount = result.total || 0
         this.currentPage = page
         this.loading = false
-        if (formatted.length < this.pageSize) {
+        // v1.16.60 渐进式加载：翻页到底 = 全部命中 map 已加载完（引擎权威值）。
+        // 原「formatted.length < pageSize」启发式在渐进模式下会误判（首轮可能只出几条），已弃用
+        if (result.allLoaded) {
           this.allLoaded = true
         }
         var elapsed = Date.now() - startTime
@@ -1340,17 +1354,20 @@
 
     // 右滑：语音态退出聆听，键盘开着先收起，再退出搜索态回主页（非搜索态主页右滑不处理）
     onSwipe(eve) {
+      // v1.16.60：搜索态下【任意方向】滑动都退搜索（主人实测搜索态左右滑出视图塌陷，
+      // 统一为"滑一下即退出"消除该状态停留）；键盘开着先收键盘再退
+      if (this.searchActive) {
+        if (this.showKeyboard) {
+          this.finishInput()
+          return
+        }
+        this.exitSearch()
+        return
+      }
       if (eve.direction !== 'right') return
       if (this.voiceActive) {
         this.exitVoiceSearch()
         return
-      }
-      if (this.showKeyboard) {
-        this.finishInput()
-        return
-      }
-      if (this.searchActive) {
-        this.exitSearch()
       }
     }
   }
