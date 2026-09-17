@@ -63,6 +63,8 @@ function getGroupEntries() {
   var ids = Object.keys(GROUP_MAP).map(Number).sort(function(a, b) { return a - b })
   for (var i = 0; i < ids.length; i++) {
     var g = GROUP_MAP[ids[i]]
+    // ⚠️ v1.16.49 回退「整类名变量」写法：轻量运行时对 classList 返回数组的路径会丢类
+    //（实测分类图标底色消失）——恢复「固定类 + 变量类」拼接（线上多版本验证 OK）
     entries.push({ name: g.name, icon: g.icon, colorClass: g.colorClass, isGroup: true, groupId: ids[i] })
   }
   return entries
@@ -128,9 +130,9 @@ function getDatasetEntries() {
     entries.push({
       name: ds.name,
       icon: ds.icon,
+      colorClass: 'ci-ds',
       dsId: ds.id,
-      isDataset: true,
-      colorClass: 'ci-ds'
+      isDataset: true
     })
   }
   return entries

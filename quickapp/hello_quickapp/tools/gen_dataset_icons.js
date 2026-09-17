@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // gen_dataset_icons.js —— 资料集图形图标生成（v1.16.42 主人要求：图标不用文字）
 // 用法: node tools/gen_dataset_icons.js
-// 产出: src/common/datasets/{poems,english,health,life,study}/icon.png（256x256，圆底+白色线条图形）
+// 产出: src/common/datasets/{poems,english,health,life,study,bt}/icon.png（128x128，圆底+白色线条图形——v1.16.48 从 256 缩至 128：显示尺寸 33~55px，减小滚动重绘解码开销）
 // 历史集沿用 /common/logo.png + icons/history.png（书本图形，本就是图形化），不在本脚本范围
 // 图标不参与搜索缓存，替换后无需递增 SearchEngine cache.version，但需重打 rpk
 'use strict'
@@ -65,14 +65,15 @@ const DATASETS = [
 ]
 
 function renderIconSvg(stem, bg) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">`
-    + `<circle cx="128" cy="128" r="120" fill="${bg}"/>` + ICONS[stem] + `</svg>`
+  // v1.16.49：输出【透明底 + 白色图形】（与 icons/history.png 同款，显示路径已验证正常）——
+  // 底色圆由页面 CSS colorClass（ci-*）绘制；图内自带彩底在轻量运行时上渲染异常（实测）
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">' + ICONS[stem] + '</svg>'
 }
 
 function main() {
   const base = path.join(__dirname, '..', 'src', 'common', 'datasets')
   for (const ds of DATASETS) {
-    const png = new Resvg(renderIconSvg(ds.stem, ds.bg), { fitTo: { mode: 'width', value: 256 } }).render().asPng()
+    const png = new Resvg(renderIconSvg(ds.stem, ds.bg), { fitTo: { mode: 'width', value: 64 } }).render().asPng()
     const out = path.join(base, ds.stem, 'icon.png')
     fs.writeFileSync(out, png)
     console.log('✅', ds.stem.padEnd(8), png.length + 'B ->', path.relative(process.cwd(), out))

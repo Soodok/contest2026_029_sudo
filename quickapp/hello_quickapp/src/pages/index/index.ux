@@ -410,8 +410,6 @@
       dotsTop: 200,
       catScrollTimer: null,
       pageScrollTimer: null,
-      lastPageY: 0,
-      lastCatScrollX: 0,
       snapParams: { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: true },
       categories: [
         { name: '健康', icon: '/common/icons/health.png', colorClass: 'ci-green' },
@@ -496,7 +494,7 @@
         var c = 'searchbox-normal'
         if (this.voiceActive) c = 'searchbox-voice'
         if (this.searchQuery) c += ' searchbox-typed'
-        return c
+        return c   // 完整类名（模板纯变量插值，v1.16.48 消除拼接）
       },
       // 当前波形帧（随模拟音量变化）
       voiceWaveSrc() {
@@ -630,7 +628,7 @@
     // 搜索态下结果随外层滚动，不做双屏分页吸附
     onPageScroll(e) {
       var y = (e && e.scrollY) || 0
-      this.lastPageY = y
+      this._lastPageY = y   // 非响应式：滚动帧高频写入，绝不进 setState
       if (this.searchActive) return
       var h = this.screen1H || 429
       var page = Math.round(y / h)
@@ -647,7 +645,7 @@
     // 吸附到最近的整屏位置：目标 scrollY = page * 屏设计高
     snapPageScroll() {
       var h = this.screen1H || 429
-      var y = this.lastPageY || 0
+      var y = this._lastPageY || 0
       var page = Math.round(y / h)
       if (page < 0) page = 0
       if (page > 1) page = 1
@@ -663,7 +661,7 @@
 
     // 分类横滑停止（debounce 150ms）后，把最近「两符号中点」对齐屏幕中心
     onCatScroll(e) {
-      this.lastCatScrollX = (e && e.scrollX) || 0
+      this._lastCatScrollX = (e && e.scrollX) || 0   // 非响应式：横滑每帧写入
       var self = this
       if (this.catScrollTimer) clearTimeout(this.catScrollTimer)
       this.catScrollTimer = setTimeout(function() {
@@ -678,7 +676,7 @@
       if (!p || !p.enabled) return
       var scrollEl = this.$element('catScroll')
       if (!scrollEl) return
-      var curX = this.lastCatScrollX || 0
+      var curX = this._lastCatScrollX || 0
       var step = p.iconW + p.spacing
       var padLeft = p.padLeft || 0
       var viewportW = 300
