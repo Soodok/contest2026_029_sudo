@@ -52,11 +52,12 @@
         </scroll>
 
         <!-- 语音搜索按钮（主人定案：本页保留语音；AI 搜索仅主界面） -->
+        <!-- v1.16.87：提示移到语音按钮上方（主人定案）；按钮整体缩小 -->
+        <text class="ds-hint">左滑返回 · 点标签筛选</text>
         <div class="voice-btn" @click="startVoiceSearch">
           <image class="voice-btn-icon" src="/common/icons/voice.png"></image>
           <text class="voice-btn-text">语音搜索</text>
         </div>
-        <text class="ds-hint">左滑返回 · 点标签筛选</text>
       </div>
 
       <!-- ===== 搜索态：结果列表（页内搜索，不跳首页） ===== -->
@@ -149,11 +150,12 @@
   .ds-tag-on { background-color: #4D9FEE; }
   .ds-tag-text { font-size: 17px; color: #BBBBBB; }
 
-  .voice-btn { width: 258px; height: 56px; border-radius: 28px; background-color: #24C1E0; margin-top: 18px; justify-content: center; align-items: center; flex-direction: row; flex-shrink: 0; }
-  .voice-btn-icon { width: 26px; height: 26px; margin-right: 8px; }
-  .voice-btn-text { font-size: 22px; color: #FFFFFF; font-weight: 500; }
+  /* v1.16.87 缩小：PRO 方屏 258×56 与搜索框同宽视觉密度过高，收为 180×44 */
+  .voice-btn { width: 180px; height: 44px; border-radius: 22px; background-color: #24C1E0; margin-top: 12px; justify-content: center; align-items: center; flex-direction: row; flex-shrink: 0; }
+  .voice-btn-icon { width: 20px; height: 20px; margin-right: 6px; }
+  .voice-btn-text { font-size: 17px; color: #FFFFFF; font-weight: 500; }
 
-  .ds-hint { font-size: 14px; color: #5b6472; margin-top: 16px; }
+  .ds-hint { font-size: 14px; color: #5b6472; margin-top: 14px; margin-bottom: 10px; }
 
   .ds-result { width: 100%; flex-direction: column; align-items: center; }
   .result-count { width: 100%; text-align: center; font-size: 16px; color: #757575; margin-top: 10px; flex-shrink: 0; }
@@ -210,10 +212,10 @@
     .ds-tags-scroll { height: 80px; margin-top: 18px; }
     .ds-tag { height: 64px; border-radius: 32px; padding: 0 26px; margin-right: 12px; }
     .ds-tag-text { font-size: 28px; }
-    .voice-btn { width: 246px; height: 92px; border-radius: 46px; margin-top: 24px; }
+    .voice-btn { width: 246px; height: 92px; border-radius: 46px; margin-top: 0; }
     .voice-btn-icon { width: 40px; height: 40px; margin-right: 12px; }
     .voice-btn-text { font-size: 34px; }
-    .ds-hint { font-size: 22px; margin-top: 20px; }
+    .ds-hint { font-size: 22px; margin-top: 20px; margin-bottom: 14px; }
     .result-item { border-radius: 30px; padding: 26px 26px; margin-bottom: 18px; }
     .result-year { font-size: 28px; }
     .result-title { font-size: 34px; }
