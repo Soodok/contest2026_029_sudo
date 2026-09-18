@@ -16,16 +16,19 @@
       </div>
 
       <!-- 搜索框：非搜索态点击进入；搜索态点击开/收键盘；有词显示内容与 ✕ -->
+      <!-- 占位不带「」引号：胶囊屏搜索框内宽有限，6 字+引号会换行（"」"被裁掉） -->
       <div class="search-box {{searchBoxClass}}" @click="toggleSearchBox">
         <image class="search-box-icon" src="/common/icons/search.png" if="{{!searchQuery && !voiceActive}}"></image>
-        <text class="search-placeholder" if="{{!searchQuery && !voiceActive}}">搜索「{{dsName}}」</text>
+        <text class="search-placeholder" if="{{!searchQuery && !voiceActive}}">搜索{{dsName}}</text>
         <text class="search-input" if="{{searchQuery && !voiceActive}}">{{displayQuery}}</text>
         <text class="clear-btn" if="{{searchQuery && !voiceActive}}" @click="clearSearch">✕</text>
         <text class="voice-text" if="{{voiceActive}}">聆听中…</text>
       </div>
 
       <!-- ===== 非搜索态：资料信息卡 + 标签 + 语音搜索按钮 ===== -->
-      <div if="{{!searchActive && !voiceActive}}">
+      <!-- ⚠️ 包裹层必须显式 flex-direction: column——本运行时无 class 的 div 默认横向排布，
+           曾把卡片/标签/语音按钮排成一行（总宽超屏、两侧裁切、全部挤在页顶） -->
+      <div class="ds-block" if="{{!searchActive && !voiceActive}}">
         <div class="ds-card">
           <div class="ds-head">
             <div class="{{dsIconClass}}">
@@ -112,6 +115,9 @@
   .voice-text { font-size: 26px; color: #4D9FEE; flex: 1; margin-left: 10px; text-align: left; }
   .searchbox-voice { height: 80px; }
   .searchbox-typed { padding-left: 6px; }
+
+  /* 非搜索态包裹层：显式纵向 + 居中（无 class div 默认 row，见模板注释） */
+  .ds-block { width: 100%; flex-direction: column; align-items: center; flex-shrink: 0; }
 
   /* 资料信息卡：图标+集名+简介 成组放进圆角卡片（与主界面第二屏卡片同视觉语言） */
   .ds-card { width: 258px; border-radius: 21px; background-color: #1C1C1E; padding: 20px 16px 16px; flex-direction: column; align-items: center; flex-shrink: 0; margin-top: 20px; }
