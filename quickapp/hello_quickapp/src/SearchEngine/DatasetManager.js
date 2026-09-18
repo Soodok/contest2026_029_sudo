@@ -341,13 +341,15 @@ function warmupSingle(dsId, onProgress) {
   return warmupOne(ds, onProgress, true)
 }
 
-async function warmupAllCaches(onProgress) {
+// v1.16.85 可选 keepAlive：true 时保留引擎实例（内存池常驻）——供首页后台预热用，
+// 首次总搜索直接命中内存不再冷读；loading 页可视构建仍默认释放（峰值内存约束不变）
+async function warmupAllCaches(onProgress, keepAlive) {
   var done = 0
   for (var i = 0; i < DATASETS.length; i++) {
     var ds = DATASETS[i]
     try {
       await Promise.race([
-        (async function() { await warmupOne(ds) })(),
+        (async function() { await warmupOne(ds, null, keepAlive) })(),
         new Promise(function(r) { setTimeout(r, 20000) })
       ])
     } catch (e) {

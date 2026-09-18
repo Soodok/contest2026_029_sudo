@@ -3,7 +3,7 @@
   import { getSearchEngine } from './SearchEngine/SearchEngine.js'
   // 应用版本（与 src/manifest.json 的 versionName 保持同步——改版本时两处一起改）
   const APP_VERSION = '1.16.71'   // ⚠️ 必须与 manifest.json versionName 同步（审查发现落后12版，v1.16.71 同步）
-  import { searchAllAsync, getItemByGlobalId, getDatasetEntries, getGroupEntries, getDatasetInfo } from './SearchEngine/DatasetManager.js'
+  import { searchAllAsync, getItemByGlobalId, getDatasetEntries, getGroupEntries, getDatasetInfo, warmupAllCaches } from './SearchEngine/DatasetManager.js'
   import { initBtReceiver } from './SearchEngine/BtTransfer.js'
 
   // ========== 日志系统（直接操作 storage）==========
@@ -167,6 +167,19 @@
   // 引擎就绪后刷新全局量（mapChunkSize / detailChunkSize 在 meta 加载后才准确）。
   // 页面（loading）在 init 成功 / 懒初始化完成后调用它。
   global.refreshEngineGlobals = function() { mountToGlobal() }
+
+  // v1.16.85 后台预热（首页启动后触发一次）：keepAlive 保留各集引擎实例（内存池不释放），
+  // 首次总搜索直接命中内存，不再冷读块文件（此前每次启动后首搜都「像重建一次」）。
+  // ⚠️ 必须挂在这里（app 作用域）：暖的引擎池必须与 global.searchHistory 用的同一批实例；
+  // 页面作用域各自有模块实例，在页面里调用会暖错对象。幂等，可安全重跑。
+  global.warmupBackground = function() {
+    try {
+      warmupAllCaches(null, true)
+      console.log('[APP] 后台预热已启动（keepAlive）')
+    } catch (e) {
+      console.log('[APP] 后台预热异常: ' + e.message)
+    }
+  }
 
   function mountToGlobal() {
     var engine = engineInstance

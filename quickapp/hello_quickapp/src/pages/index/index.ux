@@ -510,23 +510,38 @@
         // v1.16.68：storage.get 回调在 onShow 早期可能丢失（快应用已知问题）——
         // 延迟 300ms 发起 + 800ms 超时兜底（回调丢了也按「未建」跳加载页，
         // loading 侧缓存命中会秒过，代价可接受）；不跳则视为已建直接主界面。
+        // v1.16.85 两项修正（主人反馈：每次进软件都触发建缓存 + 建完后总搜索仍慢）：
+        // ① 超时不再跳加载页——冷启动 storage 回调普遍超 800ms，旧逻辑每次启动都误判
+        //    「未建」→ 跳加载页真跑一遍完整初始化+预热（数秒）。现超时先留首页；
+        //    若稍后回调确认未建（真首次/数据更新），仍会进加载页（不漏真重建）。
+        // ② 留首页后触发一次后台预热（global.warmupBackground，app 作用域 keepAlive
+        //    填充各集引擎内存池）——首次总搜索不再冷读块文件（修复「感觉又重建一次」）。
         setTimeout(function() {
           if (selfC.isDestroyed) return
-          var settled = false
-          var timer = setTimeout(function() {
-            if (settled) return
-            settled = true
-            console.log('[DS] 缓存判断超时，按未建处理')
+          var navigated = false
+          var goLoading = function(why) {
+            if (navigated || selfC.isDestroyed) return
+            navigated = true
+            console.log('[DS] 进入加载页: ' + why)
             router.replace({ uri: '/pages/loading' })
-          }, 800)
+          }
+          var timer = setTimeout(function() {
+            if (navigated) return
+            console.log('[DS] 缓存判断超时：留首页，回调后到再补判')
+            if (typeof global !== 'undefined' && typeof global.warmupBackground === 'function') {
+              global.warmupBackground()
+            }
+          }, 3000)
           try {
             isCacheBuilt().then(function(built) {
-              if (settled) return
-              settled = true
               clearTimeout(timer)
-              if (!built && !selfC.isDestroyed) {
-                console.log('[DS] 索引缓存未建，进入加载页')
-                router.replace({ uri: '/pages/loading' })
+              if (selfC.isDestroyed || navigated) return
+              if (!built) {
+                goLoading('缓存未建')
+              } else {
+                if (typeof global !== 'undefined' && typeof global.warmupBackground === 'function') {
+                  global.warmupBackground()
+                }
               }
             })
           } catch (e) { console.log('[DS] 缓存判断异常: ' + e.message) }
