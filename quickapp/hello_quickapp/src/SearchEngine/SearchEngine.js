@@ -681,6 +681,13 @@ async _checkAllMapsCache() {
     // 存入内存
     this.mapData[mapId] = mapData
     this.loadedMapsOrder.push(mapId)
+    // v1.16.72 审查修复（中#2）：idToIndex 统一在此补建——渐进切片/LRU 逐出后
+    // 自愈重载的 map 也带索引（原只在 _loadNextMapIntoState 建，重载路径缺失 → 整批丢行）
+    if (!mapData.idToIndex) {
+      var idxMap = {}
+      for (var ii = 0; ii < mapData.ids.length; ii++) idxMap[mapData.ids[ii]] = ii
+      mapData.idToIndex = idxMap
+    }
     
     return mapData
   }
@@ -1289,11 +1296,17 @@ async _checkAllMapsCache() {
         if (candidateIds.length > maxYearResults) {
           candidateIds = candidateIds.slice(0, maxYearResults)
         }
+      } else if (this._searchState && this._searchState.key === (trimmed + '|' + category + '|' + region) && this._searchState.candidateIds) {
+        // v1.16.72 审查修复（中#5）：同 query 翻页直接复用候选（不重复读 block 求交）
+        candidateIds = this._searchState.candidateIds
       } else {
         candidateIds = await this._searchKeyword(trimmed)
         var maxKeywordResults = this.config.search.keywordMaxResults
         if (candidateIds.length > maxKeywordResults) {
           candidateIds = candidateIds.slice(0, maxKeywordResults)
+        }
+        if (this._searchState && this._searchState.key === (trimmed + '|' + category + '|' + region)) {
+          this._searchState.candidateIds = candidateIds
         }
       }
       stepTimings['0_获取候选ID'] = Date.now() - t0
@@ -1302,12 +1315,7 @@ async _checkAllMapsCache() {
         return { results: [], total: 0 }
       }
       
-      // 候选ID截断
-      var MAX_CANDIDATES = 500
-      if (candidateIds.length > MAX_CANDIDATES) {
-        candidateIds = candidateIds.slice(0, MAX_CANDIDATES)
-      }
-      
+
       // ===== 渐进式 map 加载（v1.16.60 主人优化）=====
       // 读完 block 求交得全部候选 id 后：
       //   ① 按候选的 map 归属统计落点，map 按命中数降序排行（mapRank）
@@ -1353,6 +1361,7 @@ async _checkAllMapsCache() {
           loadedCount: 0,
           rows: [],            // [{id, mapId}] 已加载且通过筛选的行（map 排行序）
           candidateTotal: candidateTotal,
+          candidateIds: candidateIds,   // v1.16.72 审查修复（中#5）：候选一并缓存（翻页复用）
           forceAll: filtering
         }
       }
@@ -1369,7 +1378,7 @@ async _checkAllMapsCache() {
 
       // 切片：从已加载行按页取（map 排行序稳定，翻页只追加不重排）
       var t5 = Date.now()
-      var total = st.candidateTotal
+      var total = filtering ? st.rows.length : st.candidateTotal
       var start = (page - 1) * pageSize
       var end = Math.min(start + pageSize, st.rows.length)
       var results = []
@@ -1418,7 +1427,9 @@ async _checkAllMapsCache() {
       if (typeof global !== 'undefined' && global.addRuntimeLog) {
         global.addRuntimeLog('搜索异常: ' + e.message, 'error')
       }
-      return { results: [], total: 0, allLoaded: true }
+      // v1.16.72 审查修复（低#13）：异常不当「已显示全部」（原 allLoaded:true 会把
+      // 错误吞成正常空态）；false 让上层可区分（后续可加错误重试 UI）
+      return { results: [], total: 0, allLoaded: false }
     }
   }
 
@@ -1444,9 +1455,10 @@ async _checkAllMapsCache() {
       if (filtering) {
         var pass = true
         if (region !== 'all' && this.regionList[map.regionIds[index]] !== region) pass = false
+        // ⚠️ category 筛选暂放行（审查低#9）：loadDetail 为空实现，启用会导致恒 0 结果；
+        // 真要启用 category 筛选前必须先实现 loadDetail
         if (pass && category !== 'all' && this.categoryList.length > 0) {
-          var detail = await this.loadDetail(id)
-          if (!detail || this.categoryList[detail.categoryId] !== category) pass = false
+          pass = true   // TODO: 实现 loadDetail 后改为真实过滤
         }
         if (!pass) continue
       }

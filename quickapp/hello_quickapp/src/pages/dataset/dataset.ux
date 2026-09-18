@@ -53,7 +53,8 @@
       <!-- ===== 搜索态：结果列表（页内搜索，不跳首页） ===== -->
       <div class="ds-result" if="{{searchActive && !voiceActive}}">
         <text class="empty-tip" if="{{loading}}">搜索中…</text>
-        <text class="empty-tip" if="{{!loading && searched && displayList.length === 0}}">无结果</text>
+        <text class="empty-tip" if="{{searchError && !loading}}">搜索出错，请重试</text>
+        <text class="empty-tip" if="{{!loading && searched && displayList.length === 0 && !searchError}}">无结果</text>
         <text class="empty-tip" if="{{!loading && !searched}}">输入关键词，收起键盘开始搜索</text>
         <div class="result-item" for="{{visibleList}}" @click="gotoDetail($item.id)">
           <text class="{{$item.yearClass}}">{{$item.yearDisplay}}</text>
@@ -218,6 +219,7 @@
       visibleCount: 5,
       moreText: '',
       searched: false,
+      searchError: false,
       loading: false,
       currentPage: 1,
       pageSize: 20,
@@ -236,8 +238,9 @@
         return this.searchQuery
       },
       searchBoxClass() {
-        var c = 'search-box'
-        if (this.voiceActive) c += ' searchbox-voice'
+        // 审查低#10：模板已写固定基类 search-box，这里只返回修饰类
+        var c = ''
+        if (this.voiceActive) c = 'searchbox-voice'
         if (this.searchQuery) c += ' searchbox-typed'
         return c
       },
@@ -250,10 +253,13 @@
 
     onInit() {
       var target = (typeof global !== 'undefined') ? global.dsViewTarget : null
-      if (!target && target !== 0) { router.back(); return }
+      // ⚠️ 审查中#3：onInit 阶段 DomPage 未 ready，router.back() 静默无效（项目已知坑）
+      // ——此处只记无效标志，onShow 再执行返回
+      this._invalidTarget = (!target && target !== 0)
+      if (this._invalidTarget) return
       this.dsId = target
       var info = (typeof global.getDatasetInfo === 'function') ? global.getDatasetInfo(target) : null
-      if (!info) { router.back(); return }
+      if (!info) { this._invalidTarget = true; return }
       this.dsName = info.name
       this.dsDesc = info.desc || ''
       this.dsIcon = info.icon
@@ -278,6 +284,10 @@
 
     onShow() {
       var self = this
+      // 审查中#3：onInit 记录的无效目标在这里退（onInit 阶段 router 静默失效）
+      if (this._invalidTarget) { router.back(); return }
+      // 审查中#4：onShow 每次都 new interval 会泄漏（从详情页返回一次多一个）——先清旧的
+      if (this.timeTimer) { clearInterval(this.timeTimer); this.timeTimer = null }
       this.updateTime()
       this.timeTimer = setInterval(function() { self.updateTime() }, 30000)
     },
@@ -362,6 +372,7 @@
       this.currentPage = 1
       this.allLoaded = false
       this.searched = true
+      this.searchError = false
       this.loading = true
       this.displayList = []
       this.visibleCount = 5
@@ -410,7 +421,9 @@
       } catch (e) {
         if (seq !== this.searchSeq || this.isDestroyed) return
         this.loading = false
+        // 审查低#12：读文件回调丢失等异常 ≠ 无结果——显示错误提示（可重试）
         this.searched = true
+        this.searchError = true
       }
     },
 
@@ -435,11 +448,12 @@
       this.voiceActive = true
       this.voiceText = '聆听中…'
       var self = this
-      // 超时兜底：12s 未识别自动退出
+      // 超时兜底：12s 未识别自动退出（审查低#11：补 cancel + 提示文案）
       this.voiceTimer = setTimeout(function() {
         if (self && !self.isDestroyed && self.voiceActive) {
           self.voiceActive = false
-          self.voiceText = '聆听中…'
+          self.voiceText = '识别超时，请重试'
+          getAssistant().cancel()
         }
       }, 12000)
       getAssistant().recognize(function(r) {

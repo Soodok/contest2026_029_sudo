@@ -622,9 +622,9 @@
       if (page > 1) page = 1
       this.curPage = page
       var target = page * h
-      // v1.16.64 滑动手感优化：偏离目标 < 屏高 18% 时不吸附——留出自由滑动的余量，
-      // 只有「跨过半屏意图」才触发一次平滑对齐（原实现任何小偏移都会被 smooth 拽回，
-      // 是主人反馈「滑动卡卡的」的主要手感来源）
+      // v1.16.64 滑动手感优化（v1.16.71 debounce 150→100）：偏离目标 < 屏高 18% 时不吸附——
+      // 留出自由滑动的余量，只有「跨过半屏意图」才触发一次平滑对齐
+      //（原实现任何小偏移都会被 smooth 拽回，是主人反馈「滑动卡卡的」的主要手感来源）
       if (Math.abs(target - y) > h * 0.18) {
         var el = this.$element('pageScroll')
         if (el) {
@@ -633,7 +633,7 @@
       }
     },
 
-    // 分类横滑停止（debounce 150ms）后，把最近「两符号中点」对齐屏幕中心
+    // 分类横滑停止（debounce 100ms）后，把最近「两符号中点」对齐屏幕中心
     onCatScroll(e) {
       this._lastCatScrollX = (e && e.scrollX) || 0   // 非响应式：横滑每帧写入
       var self = this
@@ -720,16 +720,17 @@
         }
         if (r && r.ok && r.text) {
           self.log('[HOME-SEARCH] 语音识别（' + r.mode + '）：' + r.text)
-          // 识别成功：退出聆听态 → 填词 → 走真实搜索
+          // 识别成功：退出聆听态 → 【先填词再进搜索态】（审查严重#1：原顺序
+          // enterSearch 时旧词为空 → searchActive=false → 结果区不渲染，首用必现）
           self.exitVoiceSearch()
           self.activeDatasetId = null
           self.activeGroupId = null
           self._resetSearchFilters()
           self.aiMode = false
-          self.enterSearch()
           self.searchQuery = r.text
           global.searchQuery = r.text
-          self.loadPage(1, true)
+          self.enterSearch()
+          self.resetAndSearch()
         }
       })
     },
@@ -808,6 +809,7 @@
         this.searchError = false
         this.showEngineTip = false
         this.searchSeq++   // 作废在途搜索（审查修复）
+        this.loading = false   // 审查中#8：作废路径的丢弃分支在置 false 前返回，需在此复位
         this.searchActive = true
         this._applySearchLayout(true)
         this.log('[HOME-SEARCH] 进入' + (isGrp ? '大类 ' : '资料集 ') + item.name +
@@ -913,17 +915,15 @@
       if (this._layoutGuard('enterSearch')) return
       // v1.16.60：取消待执行的空词自动退出（防「退出中又点搜索框」的状态竞态）
       if (this._emptyExitTimer) { clearTimeout(this._emptyExitTimer); this._emptyExitTimer = null }
-      {
-        this.activeCategory = 'all'
-        // v1.16.67：资料详情已独立成页——普通搜索入口一律清掉资料集限定
-        this.activeDatasetId = null
-        this.activeGroupId = null
-        this.baseTitle = '搜索'
-        // 搜索框/搜索按钮进入：不切换下方内容（搜索框/分类行保持），仅弹键盘；
-        // 有残留搜索词才显示结果区，无词保持分类行可见 → 无「内容替换」切换感
-        this.searchActive = !!(this.searchQuery && this.searchQuery.trim())
-        this._applySearchLayout(this.searchActive)
-      }
+      this.activeCategory = 'all'
+      // v1.16.67：资料详情已独立成页——普通搜索入口一律清掉资料集限定
+      this.activeDatasetId = null
+      this.activeGroupId = null
+      this.baseTitle = '搜索'
+      // 搜索框/搜索按钮进入：不切换下方内容（搜索框/分类行保持），仅弹键盘；
+      // 有残留搜索词才显示结果区，无词保持分类行可见 → 无「内容替换」切换感
+      this.searchActive = !!(this.searchQuery && this.searchQuery.trim())
+      this._applySearchLayout(this.searchActive)
       this.log('[HOME-SEARCH] 进入搜索层 词=' + this.searchQuery)
       // 回滚到顶部
       var pageScrollEl = this.$element('pageScroll')
@@ -1261,6 +1261,7 @@
 
     gotoDetail(id) {
       if (this.showKeyboard) return
+      if (this.$app.$def.isNavigating) return
       if (this.$app.$def.isNavigating) return
       if (typeof global.addRuntimeLog === 'function') {
         global.addRuntimeLog('从结果页打开详情: ID=' + id, 'info')

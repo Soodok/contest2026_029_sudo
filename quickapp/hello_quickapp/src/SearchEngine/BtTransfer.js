@@ -81,16 +81,32 @@ function handleMessage(data) {
     var idx = msg.i || 0
     if (rec.chunks[idx] === undefined) { rec.chunks[idx] = String(msg.data || ''); rec.got++ }
     transfer.currentFile = fname
-    if (msg.last && !rec.last) { rec.last = true; transfer.done++ }
-    else if (msg.last) rec.last = true
+    if (msg.last && !rec.last) {
+      rec.last = true
+      transfer.done++
+      // 流式：收齐即落盘（审查中#7），从内存释放
+      var dsNow = receiving.ds
+      finalizeFile(dsNow, fname, rec).then(function(ok) {
+        if (receiving && receiving.ds === dsNow) delete receiving.files[fname]
+      })
+    }
   } else if (msg.t === 'ds-file' && receiving && receiving.ds === String(msg.ds || '')) {
     // 单帧整文件（小文件可不切片）。空文件名防护（审查修复）：空名会让后续
     // flushFile 对目录本身 writeText → 整批落盘失败
     var fname2 = String(msg.f || '')
     if (!fname2) return
-    if (!receiving.files[fname2]) transfer.done++
-    receiving.files[fname2] = { chunks: { 0: String(msg.data || '') }, got: 1, last: true }
-    transfer.currentFile = fname2
+    var rec2 = receiving.files[fname2] || (receiving.files[fname2] = { chunks: {}, got: 0, last: false })
+    if (!rec2.last) {
+      rec2.chunks[0] = String(msg.data || '')
+      rec2.got = 1
+      rec2.last = true
+      transfer.done++
+      transfer.currentFile = fname2
+      var dsNow2 = receiving.ds
+      finalizeFile(dsNow2, fname2, rec2).then(function(ok) {
+        if (receiving && receiving.ds === dsNow2) delete receiving.files[fname2]
+      })
+    }
   } else if (msg.t === 'ds-abort') {
     // 手机端主动停止（主人定案：传输中唯一退出途径）——回首页
     _log('手机端已停止传输', 'warn')
@@ -99,42 +115,31 @@ function handleMessage(data) {
     transfer.phase = 'aborted'
     try { require('@system.router').replace({ uri: '/pages/index' }) } catch (e) {}
   } else if (msg.t === 'ds-end' && receiving && receiving.ds === String(msg.ds || '')) {
+    // v1.16.73 流式落盘：文件在收齐时已逐个落盘——这里只做清单校验 + 注册
     var ds = receiving.ds
     var name = receiving.name
     var files = receiving.files
     var declared = receiving.total || 0
     receiving = null
-    // ⚠️ 完整性校验（审查修复#4）：interconnect 不保证可靠有序——缺片/缺文件时落盘
-    // 会静默产生坏文件（条目搜不到/详情错乱）。校验不通过则拒绝落盘并告警（请重发）。
     var names = Object.keys(files)
-    var incomplete = []
-    for (var fi = 0; fi < names.length; fi++) {
-      var rec0 = files[names[fi]]
-      if (!rec0.last) { incomplete.push(names[fi] + '(未收完)'); continue }
-      for (var ci = 0; ci < rec0.got; ci++) {
-        if (rec0.chunks[ci] === undefined) { incomplete.push(names[fi] + '(缺片#' + ci + ')'); break }
-      }
-    }
-    if (declared > 0 && names.length !== declared) {
-      incomplete.push('文件数不符(声明' + declared + '/实收' + names.length + ')')
-    }
-    if (incomplete.length) {
-      transfer.phase = 'error'
-      transfer.error = '资料不完整：' + incomplete.join('、') + '（请在手机端重发）'
-      _log('资料集 ' + ds + ' 完整性校验失败，拒绝落盘: ' + incomplete.join('、') + '（请重新发送）', 'error')
-      return
-    }
-    transfer.phase = 'saving'
-    _log('接收完成: ' + ds + '，共 ' + names.length + ' 个文件，校验通过，落盘中…')
+    // 未落盘的残留文件（finalizeFile 失败/未触发的）在此补落
     var chain = Promise.resolve()
-    Object.keys(files).forEach(function(fn) {
-      chain = chain.then(function() { return flushFile(ds, fn, files[fn].chunks) })
+    names.forEach(function(fn) {
+      var rec0 = files[fn]
+      if (rec0.chunks && rec0.got > 0) {
+        chain = chain.then(function() { return finalizeFile(ds, fn, rec0) })
+      }
     })
-    chain.then(function() {
-      _log('落盘完成: internal://files/datasets/' + ds + '/', 'success')
+    chain.then(function(okAll) {
+      if (declared > 0 && names.length !== declared) {
+        transfer.phase = 'error'
+        transfer.error = '文件数不符(声明' + declared + '/实收' + names.length + ')'
+        _log('文件数不符: 声明' + declared + '/实收' + names.length, 'error')
+        return
+      }
+      _log('全部落盘完成: internal://files/datasets/' + ds + '/', 'success')
       var DatasetManager = require('./DatasetManager.js')
       var dsObj = DatasetManager.registerDynamicDataset({ dirName: ds, name: name })
-      // 状态置 done（含 dsId）——由传输页检测后跳 loading 单集建缓存（v1.16.66）
       transfer.phase = 'done'
       transfer.dsId = String(dsObj.id)
       transfer.done = names.length
@@ -144,6 +149,30 @@ function handleMessage(data) {
       _log('落盘失败: ' + (e && e.message), 'error')
     })
   }
+}
+
+// 单文件收齐即落盘并从内存释放（流式：审查中#7——原实现全部文件驻留内存到
+// ds-end 才落盘，大资料集直接 OOM）。校验该文件分片连续（0..got-1 齐全）。
+function finalizeFile(ds, fname, rec) {
+  var missing = -1
+  for (var ci = 0; ci < rec.got; ci++) {
+    if (rec.chunks[ci] === undefined) { missing = ci; break }
+  }
+  if (missing !== -1) {
+    _log('文件 ' + fname + ' 缺片#' + missing + '，拒绝落盘（请重新发送）', 'error')
+    transfer.phase = 'error'
+    transfer.error = '资料 ' + fname + ' 传输不完整（缺片），请在手机端重发'
+    return Promise.resolve(false)
+  }
+  return flushFile(ds, fname, rec.chunks).then(function() {
+    _log('文件落盘: ' + fname + '（' + rec.got + ' 片）', 'success')
+    return true
+  }).catch(function(e) {
+    _log('文件 ' + fname + ' 落盘失败: ' + (e && e.message), 'error')
+    transfer.phase = 'error'
+    transfer.error = '保存失败：' + fname
+    return false
+  })
 }
 
 // 应用级监听（app.ux onCreate 调一次；重复调用幂等）
