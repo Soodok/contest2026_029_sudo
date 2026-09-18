@@ -34,7 +34,9 @@
         <text class="guide" if="{{!searchActive && !voiceActive}}">{{guideText}}</text>
 
         <!-- 分类横滑行：非搜索态、非语音态显示 -->
-        <scroll id="catScroll" class="cat-scroll" if="{{!searchActive && !voiceActive}}" scroll-x="{{true}}" onscroll="onCatScroll">
+        <!-- v1.16.96：外边距用 style 插值驱动——搜索态该节点被 if 隐藏但运行时会保留其
+     margin-top 61px（实测搜索框与「共 N 条」间距多出 61px 即此），需显式清零 -->
+        <scroll id="catScroll" class="cat-scroll" if="{{!searchActive && !voiceActive}}" style="margin-top: {{catScrollMT}}px;" scroll-x="{{true}}" onscroll="onCatScroll">
           <div class="cat-row">
             <div class="cat-item" for="{{displayCats}}" @click="goCategory($item)">
               <div class="cat-icon {{$item.colorClass}}">
@@ -202,7 +204,8 @@
   .screen1 { width: 100%; flex-direction: column; align-items: center; flex-shrink: 0; }
 
   /* 分类横滑行：图标直径 58、间距 17、名称 13px；边缘留白 8.5（间距=2×边缘） */
-  .cat-scroll { width: 100%; height: 82px; margin-top: 61px; flex-shrink: 0; }
+  /* margin-top 由模板 style 插值驱动（catScrollMT：常态 61 / 搜索态 0，v1.16.96） */
+  .cat-scroll { width: 100%; height: 82px; flex-shrink: 0; }
   .cat-row { flex-direction: row; align-items: flex-start; padding-left: 8px; padding-right: 8px; }
 
   .cat-item { width: 58px; flex-direction: column; align-items: center; margin-right: 17px; flex-shrink: 0; }
@@ -451,6 +454,7 @@
       curPage: 0,
       dotsTop: 200,
       catScrollTimer: null,
+      catScrollMT: 61,          // 分类行上边距（搜索态 0：隐藏节点仍贡献 margin，防间距虚增）
       pageScrollTimer: null,
       snapParams: { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: true },
       displayCats: [],
@@ -1124,7 +1128,11 @@
     // 头部高与 CSS 联动（rect: statusbar 22 + searchbox 16+56；pill: statusbar 91+padding 41 + searchbox 20+92），
     // 改这两处 CSS 时必须同步这里；取保守上限（宁多勿少，多了只是搜索框下多几px空隙，少了会裁搜索框）
     _searchHeaderH() {
-      if (this.screentype === 'pill-shaped') return 260
+      // v1.16.97：搜索结果区是 screen1 的兄弟节点——搜索态 screen1 的固定高度决定
+      // 搜索框与「共 N 条」的间距。胶囊屏原 260 按语音态盒子（130 高）定，
+      // 打字搜索态盒子仅 92 高 → 空留 57px（主人反馈间距过大，要求贴住）。
+      // 现按打字盒贴合：状态栏 91 + 盒上距 20 + 盒 92 = 203，+7 余量 = 210。
+      if (this.screentype === 'pill-shaped') return 210
       if (this.screentype === 'circle') return 130
       return 104
     },
@@ -1133,6 +1141,7 @@
       this._lastLayoutAt = Date.now()
       var full = this._fullScreenH || 429
       this.screen1H = searching ? this._searchHeaderH() : full
+      this.catScrollMT = searching ? 0 : 61   // 搜索态清零分类行外边距（v1.16.96）
     },
 
     // 进入搜索：搜索框/搜索按钮只弹键盘（分类行保留、被键盘盖住，无内容替换切换感）；
