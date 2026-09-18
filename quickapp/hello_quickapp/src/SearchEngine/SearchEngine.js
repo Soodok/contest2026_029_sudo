@@ -71,7 +71,9 @@ var C = {
   //（淘汰的只是内存副本，storage 持久缓存仍在，重载便宜）。
   // ⚠️ 必须 > 0：0 会让淘汰 while 变死循环（见 _ensureMap/_ensureChunk 内注释）
   maxLoadedChunks: 2,
-  maxLoadedMaps: 4,
+  // v1.16.94 内存收紧（主人定案）：动态加载最多驻留 2 张 Map（原 4），
+  // 防真机意外爆内存；被淘汰的 Map 其命中行早已提取进搜索态 rows，翻页正确性不受影响
+  maxLoadedMaps: 2,
   //调度策略：按需加载（默认）或预加载
   blockPreload: {
     enabled: true,      // 是否启用 Block 预加载
