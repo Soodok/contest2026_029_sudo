@@ -116,7 +116,7 @@ quickapp/hello_quickapp/          # 快应用工程（映射到 packages/apps/co
 │   ├── rebuild_english_cet.js    # CET-4/6 词表生成
 │   └── slim_history.js           # 历史集精简与索引重建
 └── dist/
-    └── vela.Databank.debug.1.16.76.rpk   # 构建产物（可直接安装体验）
+    └── vela.Databank.debug.1.16.77.rpk   # 构建产物（可直接安装体验）
 ```
 
 > 目录名沿用组委会模板的 `hello_quickapp`，以匹配 `contest2026_029_sudo.xml` 中既有的 `<linkfile>` 映射，无需改动 openvela 主工程。
@@ -136,7 +136,7 @@ npx aiot build       # 产物输出到 dist/
 ### 安装到 openvela 模拟器 / 手表
 
 ```bash
-adb push dist/vela.Databank.debug.1.16.76.rpk /data/local/tmp/app.rpk
+adb push dist/vela.Databank.debug.1.16.77.rpk /data/local/tmp/app.rpk
 adb shell pm install /data/local/tmp/app.rpk
 adb shell am start vela.Databank
 ```

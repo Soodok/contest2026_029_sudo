@@ -152,11 +152,13 @@
   .voice-cancel { width: 200px; height: 64px; border-radius: 32px; background-color: #2C2C2E; justify-content: center; align-items: center; }
   .voice-cancel-text { font-size: 22px; color: #FFFFFF; }
 
-  /* 键盘区（同主界面：absolute 底部，不占布局流） */
-  .kb-wrap { position: absolute; left: 0; bottom: 0; width: 100%; }
-  .kb-rect { position: relative; width: 100%; }
-  .kb-circle { position: relative; left: 0; width: 100%; }
-  .kb-pill { position: relative; width: 100%; }
+  /* 键盘区（同主界面：absolute 底部，不占布局流）。
+     ⚠️ 高度/z-index 必须显式——曾漏写导致容器高度塌 0：键盘渲染了也不可见（胶囊屏实测复现）。
+     样式与 index.ux 已验证版本逐字对齐（含 circle 缩放画布） */
+  .kb-wrap { position: absolute; left: 0; bottom: 0; width: 100%; overflow: visible; z-index: 20; }
+  .kb-rect { position: relative; width: 100%; height: 255px; }
+  .kb-circle { position: relative; left: -90px; width: 480px; height: 321px; transform: scale(0.625); transform-origin: 240px 321px; }
+  .kb-pill { position: relative; width: 100%; height: 477px; }
 
   .ci-ds { background-color: #8B5CF6; }
   .ci-blue { background-color: #4285F4; }
