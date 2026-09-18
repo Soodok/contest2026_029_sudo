@@ -363,6 +363,9 @@ async function warmupAllCaches(onProgress) {
   try {
     require('@system.storage').set({ key: 'cache_built', value: String(CACHE_VERSION) })
   } catch (e) {}
+  // 内存标记（v1.16.68 循环修复）：loading 建完即记——同会话内 index 判断走内存快路径，
+  // 不依赖 storage 回调（该回调在部分环境会丢失，导致「超时→跳 loading→回来→再超时」死循环）
+  try { if (typeof global !== 'undefined') global._launchCacheReady = true } catch (e) {}
   console.log('[DM] 预热完成 ' + done + '/' + DATASETS.length + ' 集（流式：逐集建缓存逐集释放内存，标记已写）')
   return done
 }
