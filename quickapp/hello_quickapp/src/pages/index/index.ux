@@ -135,8 +135,12 @@
          其后的 home-result-scroll（常驻 DOM、flex:1 占满搜索框以下整屏、透明背景）在 DOM 顺序上压住键盘，
          轻量运行时 z-index 不赢得命中测试 → 键盘可见但全部按键点击被 scroll 吞掉。
          现移回 page-container 根层级 + DOM 末尾（v1.13.x / result.ux / historyband9 的已验证位置）：
-         绘制与命中都优先；几何不变（absolute 的包含块本来就是 page-container） -->
-    <div class="kb-wrap" show="{{showKeyboard}}">
+         绘制与命中都优先；几何不变（absolute 的包含块本来就是 page-container）。
+         v1.16.79 改 show→if：① 首页创建不再实例化 800 行键盘组件（冷启动更轻）；
+         ② show 写法在胶囊屏会先按 rect 初值建树、device.getInfo 异步切 pill 后组件内部分支重建，
+            重建出的树不可见且点击穿透（v1.16.78 在资料页实测：if 按需创建后键盘正常显示）。
+            openKeyboard 的 150ms 延迟足以吸收 if 的首次创建成本 -->
+    <div class="kb-wrap" if="{{showKeyboard}}">
       <div class="kb-body kb-rect" if="{{screentype === 'rect'}}">
         <input-method hide="{{!showKeyboard}}" keyboardtype="QWERTY" screentype="rect" maxlength="20" @complete="onInput" @delete="onDelete"></input-method>
       </div>

@@ -1,8 +1,8 @@
 {
   "package": "vela.Databank",
   "name": "资料库",
-  "versionName": "1.16.77",
-  "versionCode": 127,
+  "versionName": "1.16.79",
+  "versionCode": 129,
   "minPlatformVersion": 1000,
   "icon": "/common/logo.png",
   "deviceTypeList": [
