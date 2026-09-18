@@ -395,22 +395,23 @@
     .search-placeholder { font-size: 30px; margin-left: 16px; }
     .search-input { font-size: 34px; margin-left: 16px; }
     .clear-btn { width: 46px; height: 46px; border-radius: 23px; font-size: 28px; line-height: 46px; margin-right: 22px; }
-    .result-count { font-size: 24px; margin-top: 10px; }
+    .result-count { font-size: 20px; margin-top: 8px; }
     /* 胶囊结果卡加大：一屏约 3 个符合腕上观感（原约 6-7 个过小） */
-    .result-item { border-radius: 30px; padding: 26px 26px; margin-bottom: 18px; }
+    /* v1.16.93 卡片缩小适配：原 54px 标题+26px 内边距一张卡占满一屏（主人实测） */
+    .result-item { border-radius: 20px; padding: 14px 18px; margin-bottom: 10px; }
     .ai-card { width: 94%; margin-left: 3%; border-radius: 30px; padding: 22px 26px; margin-bottom: 16px; }
     .ai-card-title { font-size: 28px; margin-bottom: 10px; }
     .ai-card-text { font-size: 28px; line-height: 40px; }
     .more-btn { border-radius: 30px; height: 100px; margin-bottom: 16px; }
     .more-text { font-size: 32px; }
-    .result-year { font-size: 44px; }
-    .result-title { font-size: 54px; }
-    .result-region { font-size: 36px; }
+    .result-year { font-size: 26px; }
+    .result-title { font-size: 30px; }
+    .result-region { font-size: 21px; }
     .empty-tip { font-size: 28px; margin-top: 60px; }
     .engine-tip { font-size: 28px; }
-    .sz-large { font-size: 54px; }
-    .sz-medium { font-size: 40px; }
-    .sz-small { font-size: 30px; }
+    .sz-large { font-size: 30px; }
+    .sz-medium { font-size: 23px; }
+    .sz-small { font-size: 17px; }
   }
   /* 搜索框状态类（手环9固件禁动态style，改类切换） */
   .searchbox-voice { height: 80px; }
