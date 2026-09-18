@@ -137,10 +137,6 @@
          砍掉键盘输入（真机连手机蓝牙语音，手环小屏无打字需求）。
          z-index 15、绝对定位全屏、@swipe 滑动退出保持不变 -->
     <div class="ai-panel" show="{{aiMode}}" @swipe="onAiSwipe">
-      <div class="ai-head">
-        <text class="ai-head-title">AI 助手</text>
-        <div class="ai-close" @click="exitAiMode"><text class="ai-close-text">✕</text></div>
-      </div>
       <div class="ai-body">
         <!-- 顶部语音搜索式大搜索框：聆听中/有问题/空态三块 if 互斥渲染（同一时刻仅一块可见） -->
         <div class="ai-box">
@@ -311,25 +307,22 @@
      类名加 ai- 前缀避免与首页既有样式冲突） ===== */
   /* 绝对定位全屏盖住主界面：z-index 15 低于键盘区 20（键盘浮在面板上方）、高于分页点 10；
      show 只切 display，主界面原有节点零插拔（项目铁律 #3） */
-  .ai-panel { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: #000000; z-index: 15; flex-direction: column; }
-  /* 头部：标题居左 + 右上关闭 */
-  .ai-head { width: 100%; height: 50px; flex-direction: row; justify-content: space-between; align-items: center; padding-left: 20px; padding-right: 12px; flex-shrink: 0; }
-  .ai-head-title { font-size: 24px; font-weight: bold; color: #FFFFFF; }
-  .ai-close { width: 44px; height: 44px; border-radius: 22px; justify-content: center; align-items: center; }
-  .ai-close-text { font-size: 26px; color: #BBBBBB; text-align: center; }
+  /* v1.16.102：像语音搜索一样自然——去掉 AI 助手标题与 ✕；面板从状态栏下方开始（状态栏自然可见），
+     盒子位置与语音搜索的搜索盒完全对齐；退出=底部取消/左右滑 */
+  .ai-panel { position: absolute; left: 0; top: 25px; width: 100%; height: 455px; background-color: #000000; z-index: 15; flex-direction: column; }
   /* 主体内容区：固定高（rect 整屏 429 - 头部 50；flex:1 不可靠——项目铁律 #2），
      纵向居中——套语音搜索 voice-panel 的居中布局 */
-  .ai-body { width: 100%; height: 379px; flex-direction: column; justify-content: center; align-items: center; }
+  .ai-body { width: 100%; height: 455px; flex-direction: column; justify-content: flex-start; align-items: center; }
 
   /* 顶部语音搜索式大搜索框：同款圆角描边造型（258 宽 / 圆角 28 / 描边 2px #3A3A3C / 背景 #1C1C1E），
      高度 110（比语音搜索框 56 大——AI 场景要放下完整问题文本），内容双向居中 */
-  .ai-box { width: 258px; height: 110px; border-radius: 28px; background-color: #1C1C1E; border: 2px solid #3A3A3C; flex-direction: column; justify-content: center; align-items: center; flex-shrink: 0; }
+  .ai-box { width: 258px; height: 110px; border-radius: 28px; background-color: #1C1C1E; border: 2px solid #3A3A3C; flex-direction: column; justify-content: center; align-items: center; flex-shrink: 0; margin-top: 16px; }
   .ai-box-listening { font-size: 20px; color: #8E8E93; }
   .ai-box-text { font-size: 22px; color: #FFFFFF; line-height: 30px; text-align: center; padding-left: 14px; padding-right: 14px; }
   .ai-box-hint { font-size: 20px; color: #757575; }
 
   /* 中部：圆形麦克风 + 状态文字（复制语音搜索的垂直居中排布） */
-  .ai-mid { width: 258px; flex-direction: column; align-items: center; margin-top: 40px; flex-shrink: 0; }
+  .ai-mid { width: 258px; flex-direction: column; align-items: center; margin-top: 90px; flex-shrink: 0; }
   /* 圆形麦克风 56px：聆听中蓝底 #4D9FEE、空闲/出错/思考深灰 #2C2C2E（类切换，禁动态 style） */
   .ai-mic-circle { width: 56px; height: 56px; border-radius: 28px; justify-content: center; align-items: center; flex-shrink: 0; }
   .ai-mic-on { background-color: #4D9FEE; }
@@ -338,25 +331,22 @@
   .ai-status { font-size: 20px; color: #D0D0D4; text-align: center; line-height: 28px; margin-top: 18px; }
 
   /* 底部取消按钮：语音搜索同款（160×56 圆角 28 #3A3A3C） */
-  .ai-cancel { width: 160px; height: 56px; border-radius: 28px; background-color: #3A3A3C; justify-content: center; align-items: center; margin-top: 40px; flex-shrink: 0; }
+  .ai-cancel { width: 160px; height: 56px; border-radius: 28px; background-color: #3A3A3C; justify-content: center; align-items: center; margin-top: 60px; flex-shrink: 0; }
   .ai-cancel-text { font-size: 22px; color: #FFFFFF; }
 
   /* ===== AI 面板胶囊 192x490 放大（语音直答版；主体高 766 - 头部 80） ===== */
   @media (shape: pill-shaped) {
-    .ai-head { height: 80px; padding-left: 30px; padding-right: 20px; }
-    .ai-head-title { font-size: 38px; }
-    .ai-close { width: 70px; height: 70px; border-radius: 35px; }
-    .ai-close-text { font-size: 40px; }
-    .ai-body { height: 686px; }
-    .ai-box { width: 246px; height: 150px; border-radius: 30px; border: 3px solid #3A3A3C; }
+    .ai-panel { top: 91px; height: 675px; }
+    .ai-body { height: 675px; }
+    .ai-box { width: 246px; height: 150px; border-radius: 30px; border: 3px solid #3A3A3C; margin-top: 20px; }
     .ai-box-text { font-size: 28px; line-height: 38px; }
     .ai-box-listening { font-size: 26px; }
     .ai-box-hint { font-size: 26px; }
-    .ai-mid { width: 246px; margin-top: 60px; }
+    .ai-mid { width: 246px; margin-top: 140px; }
     .ai-mic-circle { width: 88px; height: 88px; border-radius: 44px; }
     .ai-mic-img { width: 44px; height: 44px; }
     .ai-status { font-size: 30px; line-height: 40px; margin-top: 26px; }
-    .ai-cancel { width: 220px; height: 88px; border-radius: 44px; margin-top: 60px; }
+    .ai-cancel { width: 220px; height: 88px; border-radius: 44px; margin-top: 100px; }
     .ai-cancel-text { font-size: 34px; }
   }
 
