@@ -229,10 +229,13 @@
   /* 搜索按钮行：矩形左右排列，胶囊/圆形上下排列 */
   /* v1.16.83：矩形屏按钮下移贴近屏底（原 20px 留白过大；screen1H=429，加至 80 后底部余 ~15px 不溢出）。
      胶囊/圆形各自媒体查询已覆盖 margin，不受影响 */
-  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 80px; padding-left: 10px; padding-right: 10px; flex-shrink: 0; }
+  /* v1.16.95 修正按钮溢出：本运行时盒模型为 content-box，width:100% + 水平 padding
+     会把行撑到 356px 溢出屏幕（按钮两侧卡边）——去掉行内边距，靠按钮宽度控边距 */
+  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 80px; flex-shrink: 0; }
   /* v1.16.89 等宽修正：flex:1 在该运行时失效 → 两按钮按内容收缩不等宽（186 vs 153 实测），
      改固定等宽 154px（336 = 行内边距20 + 间距8 + 154×2），文字/图标水平对齐 */
-  .search-btn { position: relative; width: 154px; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: flex-start; align-items: center; flex-shrink: 0; padding-left: 14px; }
+  /* v1.16.95：content-box 下 136 + 左内边距 14 = 渲染 150；两钮+间距=308，屏幕两侧余 14px */
+  .search-btn { position: relative; width: 136px; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: flex-start; align-items: center; flex-shrink: 0; padding-left: 14px; }
   .search-btn-l { margin-right: 4px; background-color: #34A853; }
   .search-btn-r { margin-left: 4px; background-color: #2A2A2C; }
   .search-icon { width: 21px; height: 21px; margin-right: 5px; flex-shrink: 0; }
@@ -649,6 +652,12 @@
           this.resetAndSearch()
         }
       }
+      // v1.16.95 返回主界面偶发布局畸形闪动（轻量运行时重排竞态，胶囊屏出现过）：
+      // 400ms 后补一次整屏吸附复位——位置已正确时为无害空操作，短暂偏差时立即校回
+      var selfSettle = this
+      setTimeout(function() {
+        if (!selfSettle.isDestroyed) selfSettle.snapPageScroll()
+      }, 400)
       if (this.screenAdjusted) return
       this.screenAdjusted = true
       this.adjustForScreen()
