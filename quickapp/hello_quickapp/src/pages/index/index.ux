@@ -116,7 +116,7 @@
               <text class="sec2-text">设置</text>
             </div>
             <div class="sec2-card" @click="goFavorites">
-              <image class="sec2-icon" src="/common/icons/star.png"></image>
+              <image class="sec2-icon" src="/common/icons/bookmark.png"></image>
               <text class="sec2-text">{{favoriteText}}</text>
             </div>
           </div>
