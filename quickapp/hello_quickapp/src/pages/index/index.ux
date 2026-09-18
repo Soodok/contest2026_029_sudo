@@ -198,7 +198,9 @@
   .voice-text { font-size: 20px; color: #757575; flex: 1; margin-left: 10px; text-align: left; }
 
   /* 搜索按钮行：矩形左右排列，胶囊/圆形上下排列 */
-  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 20px; padding-left: 10px; padding-right: 10px; flex-shrink: 0; }
+  /* v1.16.83：矩形屏按钮下移贴近屏底（原 20px 留白过大；screen1H=429，加至 80 后底部余 ~15px 不溢出）。
+     胶囊/圆形各自媒体查询已覆盖 margin，不受影响 */
+  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 80px; padding-left: 10px; padding-right: 10px; flex-shrink: 0; }
   .search-btn { position: relative; flex: 1; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: flex-start; align-items: center; flex-shrink: 0; padding-left: 14px; }
   .search-btn-l { margin-right: 4px; background-color: #34A853; }
   .search-btn-r { margin-left: 4px; background-color: #2A2A2C; }

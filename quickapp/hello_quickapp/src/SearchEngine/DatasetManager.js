@@ -9,25 +9,25 @@ console.log('[DM] module evaluating')
 // 6 标签 = 6 数据集（主人定的精简架构：集数=标签数，搜索只需遍历 6 个集，
 // 不再是原先 24 集跨集聚合——那套导致搜索慢、缓存大、清缓存耗时、命中率低）
 var DATASETS = [
-  { id: 0, folder: '', name: '历史', tag: '历史', icon: '/common/icons/history.png',
+  { id: 0, folder: '', name: '历史', tag: '历史', count: 850, icon: '/common/icons/history.png',
     desc: '世界历史大事记，覆盖六大洲从史前到现代的关键事件',
     tags: [ { label: '亚洲', value: 'asia' }, { label: '欧洲', value: 'europe' },
             { label: '非洲', value: 'africa' }, { label: '其他', value: 'other' },
             { label: '南美洲', value: 'south_america' }, { label: '北美洲', value: 'north_america' } ] },
-  { id: 1, folder: 'datasets/poems/', name: '诗词', tag: '诗词', icon: '/common/datasets/poems/icon.png',
+  { id: 1, folder: 'datasets/poems/', name: '诗词', tag: '诗词', count: 550, icon: '/common/datasets/poems/icon.png',
     desc: '中国古诗词名篇，含朝代、作者与全文',
     tags: [ { label: '诗', value: '诗' }, { label: '词', value: '词' }, { label: '先秦', value: '先秦' },
             { label: '魏晋', value: '魏晋' }, { label: '唐朝', value: '唐朝' }, { label: '五代', value: '五代' },
             { label: '宋朝', value: '宋朝' }, { label: '元朝', value: '元朝' }, { label: '清朝', value: '清朝' } ] },
-  { id: 2, folder: 'datasets/english/', name: '英语', tag: '英语', icon: '/common/datasets/english/icon.png',
+  { id: 2, folder: 'datasets/english/', name: '英语', tag: '英语', count: 750, icon: '/common/datasets/english/icon.png',
     desc: 'CET-4/6 核心词汇，含词性与中文释义',
     tags: [ { label: '四级', value: '四级' }, { label: '六级', value: '六级' } ] },
-  { id: 3, folder: 'datasets/health/', name: '健康', tag: '健康', icon: '/common/datasets/health/icon.png',
+  { id: 3, folder: 'datasets/health/', name: '健康', tag: '健康', count: 1000, icon: '/common/datasets/health/icon.png',
     desc: '健康养生、心理情绪、急救、护肤美妆与运动知识',
     tags: [ { label: '健康', value: '健康' }, { label: '心理情绪', value: '心理情绪' },
             { label: '急救', value: '急救' }, { label: '护肤美妆', value: '护肤美妆' },
             { label: '运动', value: '运动' } ] },
-  { id: 4, folder: 'datasets/life/', name: '生活', tag: '生活', icon: '/common/datasets/life/icon.png',
+  { id: 4, folder: 'datasets/life/', name: '生活', tag: '生活', count: 1200, icon: '/common/datasets/life/icon.png',
     desc: '厨房烹饪、居家清洁、出行旅游、育儿养老等生活常识',
     tags: [ { label: '亲子育儿', value: '亲子育儿' }, { label: '出行旅游', value: '出行旅游' },
             { label: '厨房烹饪', value: '厨房烹饪' }, { label: '宠物照料', value: '宠物照料' },
@@ -36,7 +36,7 @@ var DATASETS = [
             { label: '生活居家', value: '生活居家' }, { label: '绿植养护', value: '绿植养护' },
             { label: '职场办公', value: '职场办公' }, { label: '节气节日', value: '节气节日' },
             { label: '衣物打理', value: '衣物打理' } ] },
-  { id: 5, folder: 'datasets/study/', name: '学习', tag: '学习', icon: '/common/datasets/study/icon.png',
+  { id: 5, folder: 'datasets/study/', name: '学习', tag: '学习', count: 800, icon: '/common/datasets/study/icon.png',
     desc: '学习效率、手机数码与百科知识',
     tags: [ { label: '学习效率', value: '学习效率' }, { label: '手机数码', value: '手机数码' },
             { label: '百科', value: '百科' } ] }
@@ -395,7 +395,7 @@ function getDatasetInfo(dsId) {  for (var i = 0; i < DATASETS.length; i++) {
     for (var j = 0; j < list.length; j++) {
       tags.push({ label: list[j].label, value: list[j].value, cls: 'ds-tag' })
     }
-    return { id: ds.id, name: ds.name, icon: ds.icon, desc: ds.desc || '', colorClass: 'ci-ds', tags: tags }
+    return { id: ds.id, name: ds.name, icon: ds.icon, desc: ds.desc || '', colorClass: 'ci-ds', tags: tags, count: (ds.count !== undefined ? ds.count : -1) }
   }
   return null
 }
