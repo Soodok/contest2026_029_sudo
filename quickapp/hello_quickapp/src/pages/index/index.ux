@@ -202,7 +202,9 @@
   /* v1.16.83：矩形屏按钮下移贴近屏底（原 20px 留白过大；screen1H=429，加至 80 后底部余 ~15px 不溢出）。
      胶囊/圆形各自媒体查询已覆盖 margin，不受影响 */
   .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 80px; padding-left: 10px; padding-right: 10px; flex-shrink: 0; }
-  .search-btn { position: relative; flex: 1; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: flex-start; align-items: center; flex-shrink: 0; padding-left: 14px; }
+  /* v1.16.89 等宽修正：flex:1 在该运行时失效 → 两按钮按内容收缩不等宽（186 vs 153 实测），
+     改固定等宽 154px（336 = 行内边距20 + 间距8 + 154×2），文字/图标水平对齐 */
+  .search-btn { position: relative; width: 154px; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: flex-start; align-items: center; flex-shrink: 0; padding-left: 14px; }
   .search-btn-l { margin-right: 4px; background-color: #34A853; }
   .search-btn-r { margin-left: 4px; background-color: #2A2A2C; }
   .search-icon { width: 21px; height: 21px; margin-right: 5px; flex-shrink: 0; }
