@@ -903,7 +903,7 @@
         if (self.isDestroyed || !self.aiMode || self.aiThinking !== true) return
         if (r && r.ok) {
           // 结果经 global 桥接传给回答页（模块实例按页面作用域隔离，不能靠页面间 import 共享）
-          global.aiResult = { question: q, answer: r.answer, sources: r.sources || [] }
+          global.aiResult = { question: q, answer: r.answer, card: r.card || null, sources: r.sources || [] }
           self.aiThinking = false
           // 跳页前同步状态文案：从回答页返回时面板仍显示本条（否则停留在「正在思考中」）
           self.aiStatusText = '点麦克风再问一次'
