@@ -961,7 +961,7 @@
           self.aiMode = false
           self.searchQuery = r.text
           global.searchQuery = r.text
-          self.enterSearch()
+          self.enterSearch(true)   // v1.16.98：语音填词后不唤醒键盘（主人定案）
           self.resetAndSearch()
         }
       })
@@ -1146,9 +1146,11 @@
 
     // 进入搜索：搜索框/搜索按钮只弹键盘（分类行保留、被键盘盖住，无内容替换切换感）；
     // 分类图标进入则清空词并显示结果区；统一延迟 150ms 弹键盘（先让组件 mount）
-    enterSearch() {
+    enterSearch(skipKeyboard) {
       // v1.16.58 审查清理：删除 category 参数分支（displayCats 全部带 isGroup/isDataset
       // 标记已走 goCategory 专用路径，该分支不可达；且传对象会把 item 写进 global.searchCategory）
+      // v1.16.98：skipKeyboard——语音识别入口用（识别文本已自动填词，不该再弹键盘唤醒输入，
+      // 主人定案：语音搜索不再唤醒键盘）
       if (this._layoutGuard('enterSearch')) return
       // v1.16.60：取消待执行的空词自动退出（防「退出中又点搜索框」的状态竞态）
       if (this._emptyExitTimer) { clearTimeout(this._emptyExitTimer); this._emptyExitTimer = null }
@@ -1167,7 +1169,8 @@
       if (pageScrollEl) {
         pageScrollEl.scrollTo({ left: 0, top: 0, behavior: 'smooth' })
       }
-      // 进入搜索态统一弹键盘（无词引导输入；有词可继续编辑）
+      // 进入搜索态统一弹键盘（无词引导输入；有词可继续编辑）——语音入口 skipKeyboard 跳过
+      if (skipKeyboard) return
       if (this.screenAdjusted && this.screentype) {
         this.openKeyboardDelayed()
       } else {
