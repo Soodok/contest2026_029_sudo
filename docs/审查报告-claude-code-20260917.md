@@ -7,7 +7,7 @@
 
 - BtTransfer：`typeof data === 'string' ? JSON.parse(data) : data` —— 假定消息是裸 JSON 字符串或已是对象。
 
-两者监听的是同一个通道，对同一帧数据的形态假设不同。若真机传包装对象，BtTransfer 收到的 `msg.t` 恒为 `undefined`，**蓝牙接收整条链路从根上不通**；若传裸字符串，则 AssistantEngine 的真链路应答永远解析不出。建议在真机日志确认实际形态后统一两处。
+两者监听的是同一个通道，对同一帧数据的形态假设不同。若真机传包装对象，BtTransfer 收到的 `msg.t` 恒为 `undefined`，**蓝牙接收整条链路从根上不通**；若传裸字符串，则 AssistantEngine 的真链路应答永远解析不出。建议在接入真实设备（如决赛样机）时以日志确认实际形态后统一两处。
 
 ## 中严重度
 
@@ -78,10 +78,10 @@
 - **c. 滚动帧写响应式字段**：✅ 基本合规。`onPageScroll`/`onCatScroll` 高频写 `_lastPageY`/`_lastCatScrollX`（非响应式），`curPage` 仅翻页时才写。遗留三处动态 `style`（screen1H/dotsTop，index.ux:12/125/151）但只在 `adjustForScreen` 一次性写入，不在滚动帧，可接受。
 - **d. 定时器泄漏**：✅ 无泄漏。`timeTimer/pageScrollTimer/catScrollTimer/searchTimer/voiceTimer` 均在 `onDestroy` 清理；`openKeyboardDelayed` 的裸 `setTimeout` 有 `isDestroyed` 守卫。唯一缺口是语音真链路无超时 timer（见中#1）。
 - **e. 逻辑漏洞**：见 中#2（seq 竞态）、中#3（超时败者）、中#5（动态集入口）、低#3/#4。
-- **f. 蓝牙协议**：两个高严重度问题（onmessage 互相覆盖、消息形态矛盾）+ 完整性校验缺失（中#4/#5）都集中在这一块，**是本次改动最薄弱的部分**，建议真机联调前优先解决。
+- **f. 蓝牙协议**：两个高严重度问题（onmessage 互相覆盖、消息形态矛盾）+ 完整性校验缺失（中#4/#5）都集中在这一块，**是本次改动最薄弱的部分**，建议接入真实设备前优先解决。
 
 ## 总体评价
 
-**6/10。** UI 层（index.ux）经过多轮模拟器实测迭代，状态复位、代际号防竞态、布局节流等细节可见明显打磨，注释与历史教训记录详实，模板类名与滚动帧纪律执行到位——这部分质量是高的。但两条「新增链路」问题严重：① 凑数清理引入了 `ver` 未定义回归，会让**每次完整加载以失败告终**，属于一跑就能发现的低级失误，说明清理后没有跑过一次全量加载验证；② 蓝牙接收器与 AssistantEngine 对 `onmessage` 单槽的抢占和消息形态的互相矛盾，说明两个模块是各写各的、从未在同一次运行中同时验证过。建议合并前必须处理 3 个高严重度项，并补一次「设置→重新加载 + 蓝牙传输 + 语音搜索」的端到端回归（模拟器，后续真机联调时复测）。
+**6/10。** UI 层（index.ux）经过多轮模拟器实测迭代，状态复位、代际号防竞态、布局节流等细节可见明显打磨，注释与历史教训记录详实，模板类名与滚动帧纪律执行到位——这部分质量是高的。但两条「新增链路」问题严重：① 凑数清理引入了 `ver` 未定义回归，会让**每次完整加载以失败告终**，属于一跑就能发现的低级失误，说明清理后没有跑过一次全量加载验证；② 蓝牙接收器与 AssistantEngine 对 `onmessage` 单槽的抢占和消息形态的互相矛盾，说明两个模块是各写各的、从未在同一次运行中同时验证过。建议合并前必须处理 3 个高严重度项，并补一次「设置→重新加载 + 蓝牙传输 + 语音搜索」的端到端回归（模拟器）。
 SessionEnd hook ["python3" "/c/Users/Qt/.claude/contest-shared/snapshot_core.py" --tool claude-code] failed: /usr/bin/bash: line 1: python3: command not found
 
