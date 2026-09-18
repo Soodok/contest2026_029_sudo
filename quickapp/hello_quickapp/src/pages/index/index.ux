@@ -490,12 +490,14 @@
       // 跳加载页建缓存；建完写标记，之后启动直进主界面不闪页；中断（标记没写）→ 下次自动重走。
       // ⚠️ 必须放 onShow：onInit 阶段 DomPage 未 ready，router.replace 静默无效（v1.16.66 曾因此失效）。
       // _firstChecked 保证一次会话只判断一次（否则从 loading 建完缓存回首页会被再跳回去）。
-      // v1.16.68 循环修复（三重保险）：
-      //   内存快路径：loading 本次会话已建好 → 直接主界面
+      // v1.16.68 循环修复（三重保险，v1.16.70 修正致命笔误）：
+      //   内存快路径：loading 本次会话已建好 → 跳过判断
       //   全局防重：一次会话只判断/只跳一次（防「回调丢失→超时→跳 loading→回来→再判断」死循环）
-      if (typeof global !== 'undefined' && global._launchCacheReady) return
-      if (typeof global !== 'undefined' && global._launchChecked) return
-      if (!this._firstChecked) {
+      // ⚠️⚠️ 绝不能用 return 跳出 onShow！！（v1.16.68 曾如此，导致 adjustForScreen 屏幕适配
+      //   被整段跳过：胶囊屏 screen1H 停在初值 429（应 766）→ 两屏压缩、滑动错乱、点击失灵）
+      var skipLaunchCheck = (typeof global !== 'undefined') &&
+        (global._launchCacheReady || global._launchChecked)
+      if (!skipLaunchCheck && !this._firstChecked) {
         this._firstChecked = true
         if (typeof global !== 'undefined') global._launchChecked = true
         var selfC = this
