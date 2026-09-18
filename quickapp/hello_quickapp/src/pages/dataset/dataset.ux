@@ -60,6 +60,8 @@
         <text class="empty-tip" if="{{searchError && !loading}}">搜索出错，请重试</text>
         <text class="empty-tip" if="{{!loading && searched && displayList.length === 0 && !searchError}}">无结果</text>
         <text class="empty-tip" if="{{!loading && !searched}}">输入关键词，收起键盘开始搜索</text>
+        <!-- 结果总数（对齐首页「共 N 条结果」）；本地 list 计数为兜底（引擎 total 缺失时） -->
+        <text class="result-count" if="{{searched && !loading}}">共 {{totalCount}} 条</text>
         <div class="result-item" for="{{visibleList}}" @click="gotoDetail($item.id)">
           <text class="{{$item.yearClass}}">{{$item.yearDisplay}}</text>
           <text class="{{$item.titleClass}}">{{$item.title}}</text>
@@ -68,6 +70,10 @@
         <div class="more-btn" if="{{displayList.length > visibleCount}}" @click="showMore">
           <text class="more-text">{{moreText}}</text>
         </div>
+        <!-- 尾标用独立小间距样式：empty-tip 的 60px 大边距会把「已显示全部」顶出屏外（胶囊屏实测） -->
+        <text class="ds-end" if="{{allLoaded && displayList.length > 0}}">— 已显示全部 —</text>
+        <!-- 滚动尾部余量：保证最后一条结果与尾标能完整滚入屏幕 -->
+        <div class="ds-tail-space"></div>
       </div>
 
       <!-- ===== 语音聆听态（简化版：提示 + 取消） ===== -->
@@ -80,7 +86,10 @@
     </scroll>
 
     <!-- 键盘区（absolute 底部，与主界面同款三形态） -->
-    <div class="kb-wrap" show="{{showKeyboard}}">
+    <!-- ⚠️ 用 if 不用 show：键盘组件 800+ 行（三形态分支），show 会在页面打开时
+         就整棵实例化（还因 screentype 异步从 rect 切 pill 重建两次），
+         是资料页打开耗时的最大头；if 按需创建，首次开键盘才付这个成本 -->
+    <div class="kb-wrap" if="{{showKeyboard}}">
       <div class="kb-body kb-rect" if="{{screentype === 'rect'}}">
         <input-method hide="{{!showKeyboard}}" keyboardtype="QWERTY" screentype="rect" maxlength="20" @complete="onInput" @delete="onDelete"></input-method>
       </div>
@@ -139,11 +148,15 @@
   .ds-hint { font-size: 14px; color: #5b6472; margin-top: 16px; }
 
   .ds-result { width: 100%; flex-direction: column; align-items: center; }
+  .result-count { width: 100%; text-align: center; font-size: 16px; color: #757575; margin-top: 10px; flex-shrink: 0; }
   .result-item { width: 94%; margin-left: 3%; border-radius: 14px; background-color: #1C1C1E; padding: 10px 14px; margin-bottom: 6px; flex-direction: column; flex-shrink: 0; }
   .result-year { font-size: 20px; font-weight: bold; color: #4D9FEE; margin-bottom: 2px; }
   .result-title { font-size: 22px; color: #FFFFFF; margin-bottom: 1px; }
   .result-region { font-size: 17px; color: #757575; }
   .empty-tip { width: 100%; text-align: center; font-size: 18px; color: #757575; margin-top: 40px; }
+  /* 「已显示全部」尾标：紧贴列表的小间距（勿复用 empty-tip 的大边距） */
+  .ds-end { width: 100%; text-align: center; font-size: 18px; color: #5b6472; margin-top: 14px; flex-shrink: 0; }
+  .ds-tail-space { width: 100%; height: 24px; flex-shrink: 0; }
   .more-btn { width: 94%; margin-left: 3%; height: 64px; border-radius: 14px; background-color: #2C2C2E; justify-content: center; align-items: center; margin-top: 4px; margin-bottom: 8px; flex-shrink: 0; }
   .more-text { font-size: 22px; color: #4D9FEE; }
 
@@ -194,7 +207,10 @@
     .result-year { font-size: 28px; }
     .result-title { font-size: 34px; }
     .result-region { font-size: 24px; }
+    .result-count { font-size: 24px; margin-top: 16px; }
     .empty-tip { font-size: 28px; margin-top: 60px; }
+    .ds-end { font-size: 24px; margin-top: 18px; }
+    .ds-tail-space { height: 36px; }
     .more-btn { height: 96px; border-radius: 30px; }
     .more-text { font-size: 34px; }
     .voice-tip { font-size: 34px; margin-bottom: 30px; }
@@ -231,6 +247,7 @@
       displayList: [],
       visibleCount: 5,
       moreText: '',
+      totalCount: 0,
       searched: false,
       searchError: false,
       loading: false,
@@ -349,7 +366,9 @@
 
     openKeyboard() {
       var self = this
-      setTimeout(function() { if (!self.isDestroyed) self.showKeyboard = true }, 150)
+      // v1.16.81：150→60ms——延迟只为让搜索态先落一帧；键盘组件已是 if 按需创建，
+      // 150ms 让主人感知到「点搜索栏有延迟」（实测反馈）
+      setTimeout(function() { if (!self.isDestroyed) self.showKeyboard = true }, 60)
     },
 
     onInput(evt) {
@@ -428,6 +447,8 @@
         }
         this.currentPage = page
         this.loading = false
+        // 结果总数（引擎权威 total；缺失时退化为本地 list 长度）
+        this.totalCount = result.total || this.displayList.length
         var more = this.displayList.length - (this.visibleCount || 5)
         this.moreText = more > 0 ? ('显示更多（还有 ' + more + ' 条）') : ''
         if (result && result.allLoaded) this.allLoaded = true
