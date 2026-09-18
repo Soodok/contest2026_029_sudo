@@ -160,7 +160,8 @@
   .page-scroll { width: 100%; height: 100%; flex-direction: column; }
 
   /* 状态栏：每屏顶部普通块级（随内容滚动）；矩形时间靠右，下方小字应用名；左右对称 padding 保证三栏均分后标题落于屏正中 */
-  .statusbar { width: 100%; height: 22px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
+  /* v1.16.86：padding-top 3px——rect 标题 20px 字号在 22px 栏内距顶仅 ~1px 贴顶（主人实测），加呼吸空间 */
+  .statusbar { width: 100%; height: 25px; padding-top: 3px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
   .sb-left { flex: 1; }
   .sb-block { flex: 1; flex-direction: column; align-items: flex-end; }
   .time { font-size: 16px; color: #757575; font-weight: 400; }
