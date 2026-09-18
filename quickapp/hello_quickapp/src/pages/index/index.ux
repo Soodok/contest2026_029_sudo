@@ -526,17 +526,6 @@
           } catch (e) { console.log('[DS] 缓存判断异常: ' + e.message) }
         }, 300)
       }
-      // v1.16.67：从资料详情页返回并请求搜索（dsSearchTarget）→ 带该集限定进搜索态
-      var dst = (typeof global !== 'undefined') ? global.dsSearchTarget : null
-      if (dst) {
-        global.dsSearchTarget = null
-        this.activeDatasetId = dst.dsId
-        this.activeGroupId = null
-        this.activeRegion = dst.region || 'all'
-        this.baseTitle = '搜索'
-        var selfD = this
-        setTimeout(function() { if (!selfD.isDestroyed) selfD.enterSearch() }, 60)
-      }
       // 若此前提示「数据未加载」而引擎现已就绪（用户去设置加载完返回），自动清除提示并重搜
       var eng = global.searchEngine
       if (this.showEngineTip && eng && eng.isReady) {

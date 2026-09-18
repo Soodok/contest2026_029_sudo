@@ -1,44 +1,98 @@
+<import name="input-method" src="../../components/InputMethod/InputMethod.ux"></import>
+
 <template>
-  <!-- 资料详情页（v1.16.67 主人定案：从首页内嵌视图独立成页——根治「首页多点
-       条件翻转致塌陷」：独立渲染树与首页搜索态/分类行完全解耦） -->
+  <!-- 资料详情页（v1.16.67 独立成页；v1.16.72 主人定案：页内搜索——不跳回首页，
+       搜索逻辑按主界面简化实现；含语音搜索按钮；AI 搜索仅保留在主界面） -->
   <div class="ds-page" @swipe="onSwipe">
-    <div class="statusbar">
-      <text class="rect-title" if="{{showRectTitle}}">{{dsName}}</text>
-      <div class="sb-block">
-        <text class="time">{{time}}</text>
-        <text class="app-title" if="{{showAppTitle}}">{{dsName}}</text>
-      </div>
-    </div>
-
-    <!-- 搜索入口：点击 → 带「该集限定」回首页搜索态（键盘/结果链路全复用首页） -->
-    <div class="search-box" @click="goSearch">
-      <image class="search-box-icon" src="/common/icons/search.png"></image>
-      <text class="search-placeholder">搜索「{{dsName}}」{{activeTag ? '·' + activeTag : ''}}</text>
-    </div>
-
-    <div class="ds-view">
-      <div class="ds-head">
-        <div class="{{dsIconClass}}">
-          <image class="ds-icon" src="{{dsIcon}}"></image>
+    <scroll class="ds-scroll" scroll-y="{{!voiceActive}}">
+      <!-- 状态栏：时间 + 集名（搜索态标题不变） -->
+      <div class="statusbar">
+        <text class="rect-title" if="{{showRectTitle}}">{{dsName}}</text>
+        <div class="sb-block">
+          <text class="time">{{time}}</text>
+          <text class="app-title" if="{{showAppTitle}}">{{dsName}}</text>
         </div>
-        <text class="ds-name">{{dsName}}</text>
       </div>
-      <text class="ds-desc">{{dsDesc}}</text>
-      <scroll class="ds-tags-scroll" scroll-x="{{true}}">
-        <div class="ds-tags">
-          <div class="{{$item.cls}}" for="{{dsTags}}" @click="pickTag($item)">
-            <text class="ds-tag-text">{{$item.label}}</text>
+
+      <!-- 搜索框：非搜索态点击进入；搜索态点击开/收键盘；有词显示内容与 ✕ -->
+      <div class="search-box {{searchBoxClass}}" @click="toggleSearchBox">
+        <image class="search-box-icon" src="/common/icons/search.png" if="{{!searchQuery && !voiceActive}}"></image>
+        <text class="search-placeholder" if="{{!searchQuery && !voiceActive}}">搜索「{{dsName}}」</text>
+        <text class="search-input" if="{{searchQuery && !voiceActive}}">{{displayQuery}}</text>
+        <text class="clear-btn" if="{{searchQuery && !voiceActive}}" @click="clearSearch">✕</text>
+        <text class="voice-text" if="{{voiceActive}}">聆听中…</text>
+      </div>
+
+      <!-- ===== 非搜索态：资料信息 + 标签 + 语音搜索按钮 ===== -->
+      <div if="{{!searchActive && !voiceActive}}">
+        <div class="ds-view">
+          <div class="ds-head">
+            <div class="{{dsIconClass}}">
+              <image class="ds-icon" src="{{dsIcon}}"></image>
+            </div>
+            <text class="ds-name">{{dsName}}</text>
           </div>
+          <text class="ds-desc">{{dsDesc}}</text>
+          <scroll class="ds-tags-scroll" scroll-x="{{true}}">
+            <div class="ds-tags">
+              <div class="{{$item.cls}}" for="{{dsTags}}" @click="pickTag($item)">
+                <text class="ds-tag-text">{{$item.label}}</text>
+              </div>
+            </div>
+          </scroll>
         </div>
-      </scroll>
-    </div>
 
-    <text class="ds-hint">左滑返回 · 点标签筛选</text>
+        <!-- 语音搜索按钮（主人定案：本页保留语音；AI 搜索仅主界面） -->
+        <div class="voice-btn" @click="startVoiceSearch">
+          <image class="voice-btn-icon" src="/common/icons/voice.png"></image>
+          <text class="voice-btn-text">语音搜索</text>
+        </div>
+        <text class="ds-hint">左滑返回 · 点标签筛选</text>
+      </div>
+
+      <!-- ===== 搜索态：结果列表（页内搜索，不跳首页） ===== -->
+      <div class="ds-result" if="{{searchActive && !voiceActive}}">
+        <text class="empty-tip" if="{{loading}}">搜索中…</text>
+        <text class="empty-tip" if="{{!loading && searched && displayList.length === 0}}">无结果</text>
+        <text class="empty-tip" if="{{!loading && !searched}}">输入关键词，收起键盘开始搜索</text>
+        <div class="result-item" for="{{visibleList}}" @click="gotoDetail($item.id)">
+          <text class="{{$item.yearClass}}">{{$item.yearDisplay}}</text>
+          <text class="{{$item.titleClass}}">{{$item.title}}</text>
+          <text class="{{$item.catClass}}">{{$item.region}}</text>
+        </div>
+        <div class="more-btn" if="{{displayList.length > visibleCount}}" @click="showMore">
+          <text class="more-text">{{moreText}}</text>
+        </div>
+      </div>
+
+      <!-- ===== 语音聆听态（简化版：提示 + 取消） ===== -->
+      <div class="voice-panel" if="{{voiceActive}}">
+        <text class="voice-tip">{{voiceText}}</text>
+        <div class="voice-cancel" @click="exitVoiceSearch">
+          <text class="voice-cancel-text">取消</text>
+        </div>
+      </div>
+    </scroll>
+
+    <!-- 键盘区（absolute 底部，与主界面同款三形态） -->
+    <div class="kb-wrap" show="{{showKeyboard}}">
+      <div class="kb-body kb-rect" if="{{screentype === 'rect'}}">
+        <input-method hide="{{!showKeyboard}}" keyboardtype="QWERTY" screentype="rect" maxlength="20" @complete="onInput" @delete="onDelete"></input-method>
+      </div>
+      <div class="kb-body kb-circle" if="{{screentype === 'circle'}}">
+        <input-method hide="{{!showKeyboard}}" keyboardtype="QWERTY" screentype="circle" maxlength="20" @complete="onInput" @delete="onDelete"></input-method>
+      </div>
+      <div class="kb-body kb-pill" if="{{screentype === 'pill-shaped'}}">
+        <input-method hide="{{!showKeyboard}}" keyboardtype="QWERTY" screentype="pill-shaped" maxlength="20" @complete="onInput" @delete="onDelete"></input-method>
+      </div>
+    </div>
   </div>
 </template>
 
 <style>
-  .ds-page { width: 100%; height: 100%; background-color: #000000; flex-direction: column; align-items: center; }
+  .ds-page { width: 100%; height: 100%; background-color: #000000; position: relative; flex-direction: column; align-items: center; }
+  .ds-scroll { width: 100%; height: 100%; flex-direction: column; }
+
   .statusbar { width: 100%; height: 22px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
   .rect-title { flex: 1; text-align: center; font-size: 20px; color: #FFFFFF; font-weight: 500; }
   .sb-block { flex: 1; flex-direction: column; align-items: flex-end; }
@@ -48,6 +102,11 @@
   .search-box { width: 258px; height: 56px; border-radius: 28px; background-color: #1C1C1E; border: 2px solid #3A3A3C; flex-direction: row; justify-content: flex-start; align-items: center; padding-left: 18px; margin-top: 16px; flex-shrink: 0; }
   .search-box-icon { width: 24px; height: 24px; }
   .search-placeholder { font-size: 20px; color: #757575; flex: 1; margin-left: 10px; text-align: left; }
+  .search-input { font-size: 22px; color: #FFFFFF; flex: 1; margin-left: 10px; text-align: left; }
+  .clear-btn { width: 28px; height: 28px; border-radius: 14px; background-color: #3A3A3C; color: #FFFFFF; text-align: center; font-size: 18px; line-height: 28px; margin-right: 14px; flex-shrink: 0; }
+  .voice-text { font-size: 26px; color: #4D9FEE; flex: 1; margin-left: 10px; text-align: left; }
+  .searchbox-voice { height: 80px; }
+  .searchbox-typed { padding-left: 6px; }
 
   .ds-view { width: 100%; flex-direction: column; align-items: center; flex-shrink: 0; margin-top: 24px; }
   .ds-head { flex-direction: row; align-items: center; margin-bottom: 8px; }
@@ -60,7 +119,32 @@
   .ds-tag { height: 40px; border-radius: 20px; background-color: #1C1C1E; justify-content: center; align-items: center; padding: 0 16px; margin-right: 8px; flex-shrink: 0; }
   .ds-tag-on { background-color: #4D9FEE; }
   .ds-tag-text { font-size: 17px; color: #BBBBBB; }
-  .ds-hint { font-size: 14px; color: #5b6472; margin-top: 20px; }
+
+  .voice-btn { width: 258px; height: 56px; border-radius: 28px; background-color: #24C1E0; margin-top: 18px; justify-content: center; align-items: center; flex-direction: row; flex-shrink: 0; }
+  .voice-btn-icon { width: 26px; height: 26px; margin-right: 8px; }
+  .voice-btn-text { font-size: 22px; color: #FFFFFF; font-weight: 500; }
+
+  .ds-hint { font-size: 14px; color: #5b6472; margin-top: 16px; }
+
+  .ds-result { width: 100%; flex-direction: column; align-items: center; }
+  .result-item { width: 94%; margin-left: 3%; border-radius: 14px; background-color: #1C1C1E; padding: 10px 14px; margin-bottom: 6px; flex-direction: column; flex-shrink: 0; }
+  .result-year { font-size: 20px; font-weight: bold; color: #4D9FEE; margin-bottom: 2px; }
+  .result-title { font-size: 22px; color: #FFFFFF; margin-bottom: 1px; }
+  .result-region { font-size: 17px; color: #757575; }
+  .empty-tip { width: 100%; text-align: center; font-size: 18px; color: #757575; margin-top: 40px; }
+  .more-btn { width: 94%; margin-left: 3%; height: 64px; border-radius: 14px; background-color: #2C2C2E; justify-content: center; align-items: center; margin-top: 4px; margin-bottom: 8px; flex-shrink: 0; }
+  .more-text { font-size: 22px; color: #4D9FEE; }
+
+  .voice-panel { width: 100%; flex-direction: column; align-items: center; margin-top: 30px; }
+  .voice-tip { font-size: 26px; color: #4D9FEE; margin-bottom: 20px; }
+  .voice-cancel { width: 200px; height: 64px; border-radius: 32px; background-color: #2C2C2E; justify-content: center; align-items: center; }
+  .voice-cancel-text { font-size: 22px; color: #FFFFFF; }
+
+  /* 键盘区（同主界面：absolute 底部，不占布局流） */
+  .kb-wrap { position: absolute; left: 0; bottom: 0; width: 100%; }
+  .kb-rect { position: relative; width: 100%; }
+  .kb-circle { position: relative; left: 0; width: 100%; }
+  .kb-pill { position: relative; width: 100%; }
 
   .ci-ds { background-color: #8B5CF6; }
   .ci-blue { background-color: #4285F4; }
@@ -76,6 +160,10 @@
     .search-box { width: 246px; height: 92px; border-radius: 46px; margin-top: 20px; border: 3px solid #3A3A3C; padding-left: 30px; }
     .search-box-icon { width: 40px; height: 40px; }
     .search-placeholder { font-size: 30px; margin-left: 16px; }
+    .search-input { font-size: 34px; margin-left: 16px; }
+    .clear-btn { width: 46px; height: 46px; border-radius: 23px; font-size: 28px; line-height: 46px; margin-right: 22px; }
+    .voice-text { font-size: 36px; margin-left: 16px; }
+    .searchbox-voice { height: 130px; }
     .ds-view { margin-top: 10px; }
     .ds-icon-box { width: 70px; height: 70px; border-radius: 35px; }
     .ds-icon { width: 42px; height: 42px; }
@@ -84,13 +172,28 @@
     .ds-tags-scroll { height: 80px; }
     .ds-tag { height: 64px; border-radius: 32px; padding: 0 26px; margin-right: 12px; }
     .ds-tag-text { font-size: 28px; }
-    .ds-hint { font-size: 22px; }
+    .voice-btn { width: 246px; height: 92px; border-radius: 46px; margin-top: 24px; }
+    .voice-btn-icon { width: 40px; height: 40px; margin-right: 12px; }
+    .voice-btn-text { font-size: 34px; }
+    .ds-hint { font-size: 22px; margin-top: 20px; }
+    .result-item { border-radius: 30px; padding: 26px 26px; margin-bottom: 18px; }
+    .result-year { font-size: 28px; }
+    .result-title { font-size: 34px; }
+    .result-region { font-size: 24px; }
+    .empty-tip { font-size: 28px; margin-top: 60px; }
+    .more-btn { height: 96px; border-radius: 30px; }
+    .more-text { font-size: 34px; }
+    .voice-tip { font-size: 34px; margin-bottom: 30px; }
+    .voice-cancel { width: 260px; height: 92px; border-radius: 46px; }
+    .voice-cancel-text { font-size: 32px; }
+    .kb-pill { width: 100%; }
   }
 </style>
 
 <script>
   import router from '@system.router'
   import device from '@system.device'
+  import { getAssistant } from '../../SearchEngine/AssistantEngine.js'
 
   function pad2(n) { return n < 10 ? '0' + n : '' + n }
 
@@ -106,13 +209,48 @@
       activeTag: null,
       showRectTitle: false,
       showAppTitle: true,
+      screentype: 'rect',
+      // 搜索态（v1.16.72 页内搜索，逻辑按主界面简化）
+      searchQuery: '',
+      searchActive: false,
+      showKeyboard: false,
+      displayList: [],
+      visibleCount: 5,
+      moreText: '',
+      searched: false,
+      loading: false,
+      currentPage: 1,
+      pageSize: 20,
+      allLoaded: false,
+      searchSeq: 0,
+      // 语音态
+      voiceActive: false,
+      voiceText: '聆听中…',
+      voiceTimer: null,
       timeTimer: null,
       isDestroyed: false
     },
 
+    computed: {
+      displayQuery() {
+        return this.searchQuery
+      },
+      searchBoxClass() {
+        var c = 'search-box'
+        if (this.voiceActive) c += ' searchbox-voice'
+        if (this.searchQuery) c += ' searchbox-typed'
+        return c
+      },
+      // 渐进显示：模板禁表达式，切片在此（曾漏写导致有结果的场景渲染空白——实测抓出）
+      visibleList() {
+        var n = this.visibleCount || 5
+        return this.displayList.slice(0, n)
+      }
+    },
+
     onInit() {
       var target = (typeof global !== 'undefined') ? global.dsViewTarget : null
-      if (!target) { router.back(); return }
+      if (!target && target !== 0) { router.back(); return }
       this.dsId = target
       var info = (typeof global.getDatasetInfo === 'function') ? global.getDatasetInfo(target) : null
       if (!info) { router.back(); return }
@@ -125,6 +263,17 @@
         tags.push({ label: info.tags[i].label, value: info.tags[i].value, cls: 'ds-tag' })
       }
       this.dsTags = tags
+      // 屏幕形态（键盘组件所需）
+      var self = this
+      device.getInfo({
+        success: function(data) {
+          var shape = data.screenShape
+          self.screentype = shape === 'circle' ? 'circle' : (shape === 'pill-shaped' ? 'pill-shaped' : 'rect')
+          self.showAppTitle = (shape === 'pill-shaped') || (shape === 'circle')
+          self.showRectTitle = !self.showAppTitle
+        },
+        fail: function() {}
+      })
     },
 
     onShow() {
@@ -136,6 +285,8 @@
     onDestroy() {
       this.isDestroyed = true
       if (this.timeTimer) { clearInterval(this.timeTimer); this.timeTimer = null }
+      if (this.voiceTimer) { clearInterval(this.voiceTimer); this.voiceTimer = null }
+      this.searchSeq++
     },
 
     updateTime() {
@@ -143,7 +294,7 @@
       this.time = pad2(now.getHours()) + ':' + pad2(now.getMinutes())
     },
 
-    // 点标签：切换选中（蓝色高亮），搜索时作为 region 限定
+    // ===== 标签筛选（选中后再搜索只用该标签） =====
     pickTag(tag) {
       var same = (this.activeTag === tag.value)
       this.activeTag = same ? null : tag.value
@@ -154,17 +305,170 @@
         tags.push({ label: src[i].label, value: src[i].value, cls: on ? 'ds-tag ds-tag-on' : 'ds-tag' })
       }
       this.dsTags = tags
+      // 已有词则立即按新范围重搜
+      if (this.searchQuery && this.searchQuery.trim()) {
+        this.searchActive = true
+        this.resetAndSearch()
+      }
     },
 
-    // 搜索：带「该集限定（+标签）」回首页进搜索态——键盘/结果/详情链路全复用首页
-    goSearch() {
-      global.dsSearchTarget = { dsId: this.dsId, region: this.activeTag || 'all' }
-      global.dsViewTarget = this.dsId
-      router.back()
+    // ===== 搜索框交互（同主界面简化版） =====
+    toggleSearchBox() {
+      if (this.voiceActive) return
+      if (this.showKeyboard) {
+        this.showKeyboard = false
+        this.finishInput()
+      } else {
+        this.searchActive = true
+        this.openKeyboard()
+      }
     },
 
-    // 左滑返回（主人定案的手势返回）
+    openKeyboard() {
+      var self = this
+      setTimeout(function() { if (!self.isDestroyed) self.showKeyboard = true }, 150)
+    },
+
+    onInput(evt) {
+      var content = evt.detail.content
+      if (content === undefined || content === null) return
+      this.searchQuery += content
+    },
+
+    onDelete() {
+      this.searchQuery = this.searchQuery.slice(0, -1)
+    },
+
+    clearSearch() {
+      this.searchQuery = ''
+      this.searchSeq++
+      this.displayList = []
+      this.searched = false
+      this.loading = false
+    },
+
+    // 收键盘 → 搜索（页内限定该集 + 标签）
+    finishInput() {
+      this.showKeyboard = false
+      if (!this.searchQuery || !this.searchQuery.trim()) {
+        // 空词收键盘：回资料信息态
+        this.searchActive = false
+        return
+      }
+      this.resetAndSearch()
+    },
+
+    resetAndSearch() {
+      this.currentPage = 1
+      this.allLoaded = false
+      this.searched = true
+      this.loading = true
+      this.displayList = []
+      this.visibleCount = 5
+      this.loadPage(1, true)
+    },
+
+    async loadPage(page, force) {
+      if (!force && (this.loading || this.allLoaded)) return
+      var q = this.searchQuery.trim()
+      if (!q) return
+      this.loading = true
+      var seq = ++this.searchSeq
+      var self = this
+      try {
+        var result = await global.searchHistory(q, {
+          datasetId: this.dsId,
+          region: this.activeTag || 'all',
+          page: page,
+          pageSize: this.pageSize
+        })
+        if (seq !== this.searchSeq || this.isDestroyed) return
+        var items = (result && result.results) || []
+        var formatted = items.map(function(item) {
+          var title = item.title || '未知条目'
+          if (title.indexOf(',') !== -1) title = title.split(',')[0].trim()
+          return {
+            id: (item.globalId !== undefined ? item.globalId : item.id),   // 跨集全局 id（详情页 decodeGlobalId 需要）
+            yearDisplay: item.yearDisplay || item.region || self.dsName,
+            title: title,
+            region: item.region || self.dsName,
+            yearClass: 'result-year',
+            titleClass: 'result-title',
+            catClass: 'result-region'
+          }
+        })
+        if (page === 1) {
+          this.displayList = formatted
+        } else {
+          this.displayList = this.displayList.concat(formatted)
+        }
+        this.currentPage = page
+        this.loading = false
+        var more = this.displayList.length - (this.visibleCount || 5)
+        this.moreText = more > 0 ? ('显示更多（还有 ' + more + ' 条）') : ''
+        if (result && result.allLoaded) this.allLoaded = true
+      } catch (e) {
+        if (seq !== this.searchSeq || this.isDestroyed) return
+        this.loading = false
+        this.searched = true
+      }
+    },
+
+    showMore() {
+      this.visibleCount = (this.visibleCount || 5) + 5
+      var more = this.displayList.length - this.visibleCount
+      this.moreText = more > 0 ? ('显示更多（还有 ' + more + ' 条）') : ''
+      if (this.visibleCount >= this.displayList.length && !this.allLoaded && !this.loading) {
+        this.loadPage(this.currentPage + 1)
+      }
+    },
+
+    gotoDetail(id) {
+      if (this.showKeyboard) return
+      global.selectedEventId = id
+      router.push({ uri: '/pages/detail' })
+    },
+
+    // ===== 语音搜索（保留；AI 搜索仅主界面） =====
+    startVoiceSearch() {
+      if (this.voiceActive) return
+      this.voiceActive = true
+      this.voiceText = '聆听中…'
+      var self = this
+      // 超时兜底：12s 未识别自动退出
+      this.voiceTimer = setTimeout(function() {
+        if (self && !self.isDestroyed && self.voiceActive) {
+          self.voiceActive = false
+          self.voiceText = '聆听中…'
+        }
+      }, 12000)
+      getAssistant().recognize(function(r) {
+        if (self.isDestroyed || !self.voiceActive) return
+        if (self.voiceTimer) { clearTimeout(self.voiceTimer); self.voiceTimer = null }
+        self.voiceActive = false
+        if (r && r.ok && r.text) {
+          self.searchQuery = r.text
+          self.searchActive = true
+          self.resetAndSearch()
+        }
+      })
+    },
+
+    exitVoiceSearch() {
+      this.voiceActive = false
+      if (this.voiceTimer) { clearTimeout(this.voiceTimer); this.voiceTimer = null }
+      getAssistant().cancel()
+    },
+
+    // 左右滑：搜索/语音态先退出，然后在资料信息态返回上一页
     onSwipe(eve) {
+      if (this.voiceActive) { this.exitVoiceSearch(); return }
+      if (this.searchActive) {
+        if (this.showKeyboard) { this.showKeyboard = false; this.finishInput(); return }
+        this.searchActive = false
+        this.clearSearch()
+        return
+      }
       if (eve.direction === 'left' || eve.direction === 'right') {
         router.back()
       }
