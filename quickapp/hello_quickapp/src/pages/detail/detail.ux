@@ -7,24 +7,29 @@
         <!-- 页头标题（对齐 favorites.ux header 结构） -->
         <div class="header"><text class="header-title">详情</text></div>
 
+        <!-- ⚠️ v1.16.84 全部卡片 if→show（节点常驻 DOM，只切 display）：
+             原写法 loading→loaded 时「移除 loading 卡 + 插入 4 张卡」多节点翻转，
+             轻量运行时偶发 DOM 乱序 → 详情字段卡跑到最顶、页头标题消失
+             （= 主人反复看到的『信息内容上下反』，数据兜底修不了渲染竞态）。
+             show 写法零插拔，卡片顺序恒定；标题/年份有兜底值不会出空卡 -->
         <!-- 加载中 -->
-        <div class="header-card" if="{{loading}}">
+        <div class="header-card" show="{{loading}}">
           <text class="loading-text">加载中...</text>
         </div>
 
-        <!-- 条目标题（历史/资料集共用 detailTitle） -->
-        <div class="header-card" if="{{!loading && detailTitle}}">
+        <!-- 条目标题（历史/资料集共用 detailTitle；数据层兜底保证非空） -->
+        <div class="header-card" show="{{!loading}}">
           <text class="detail-title">{{detailTitle}}</text>
         </div>
 
         <!-- 年份和地区 -->
-        <div class="header-card" if="{{!loading && yearDisplay}}">
+        <div class="header-card" show="{{!loading}}">
           <text class="detail-year">{{yearDisplay}}</text>
           <text class="detail-region">{{displayRegion}}</text>
         </div>
 
         <!-- 关键词 -->
-        <div class="section-card" if="{{!loading && keywordList && keywordList.length > 0}}">
+        <div class="section-card" show="{{!loading && keywordList.length > 0}}">
           <text class="section-title">关键词</text>
           <div class="keywords-row">
             <div class="keyword-tag" for="{{keywordList}}">
@@ -36,7 +41,7 @@
         <!-- 资料集动态详情字段（非历史集走这里，字段名/数量由集 meta 声明）
              顺序：条目名 → 年份/地区 → 关键词 → 详情字段
              （v1.16.14 按主人截图反馈修正：v1.16.11 曾把详情字段置顶，导致条目名被挤到最下、视觉散架） -->
-      <div class="ds-fields" if="{{detailFields && detailFields.length > 0}}">
+      <div class="ds-fields" show="{{!loading && detailFields.length > 0}}">
         <div class="section-card" for="{{detailFields}}">
           <text class="section-title">{{$item.name}}</text>
           <text class="section-content">{{$item.value}}</text>
