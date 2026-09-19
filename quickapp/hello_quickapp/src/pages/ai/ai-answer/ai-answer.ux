@@ -10,16 +10,25 @@
         <!-- 页头（对齐 detail.ux header 结构） -->
         <div class="header"><text class="header-title">AI 回答</text></div>
 
+        <!-- ===== 状态卡（单节点三态，v1.16.125）=====
+             原实现用布尔字段作判据、初值 false → 错误卡（红字「回答丢失」）首帧即渲染，
+             onShow 读到 global.aiResult 后才隐藏 = 主人看到的「进入页面先闪一下红色」。
+             现 phase 三态：loading 灰字「加载中…」/ error 红字 / ok 时类切换为高度归零。
+             只用一个节点 + 类切换 —— 不插拔节点（铁律 #4），也不留占位（本运行时 show=false 仍占位） -->
+        <div class="{{stateCardClass}}">
+          <text class="{{stateTextClass}}">{{stateText}}</text>
+        </div>
+
         <!-- ===== 正常态卡片（show 常驻节点只切 display，防 DOM 插拔乱序——项目铁律 #4） ===== -->
         <!-- 问题回顾：小字灰色 -->
-        <div class="q-review" show="{{hasResult}}">
+        <div class="q-review" show="{{phase === 'ok'}}">
           <text class="q-review-label">你的问题</text>
           <text class="q-review-text">{{question}}</text>
         </div>
 
         <!-- AI 回答卡：有结构化 card 时渲染「结论段 + 分节卡 + 尾注」（仿词条详情页分节），
              无 card 时退回 answer 纯文本（真机手机端可只回纯文本） -->
-        <div class="answer-card" show="{{hasResult}}">
+        <div class="answer-card" show="{{phase === 'ok'}}">
           <text class="answer-label">AI 回答</text>
           <text class="answer-text" if="{{cardSummary}}">{{cardSummary}}</text>
           <text class="answer-text" if="{{!cardSummary}}">{{answer}}</text>
@@ -30,21 +39,15 @@
           <text class="section-body">{{$item.body}}</text>
         </div>
         <!-- 尾注（免责声明等） -->
-        <text class="card-note" show="{{hasResult && cardNote}}">{{cardNote}}</text>
+        <text class="card-note" show="{{phase === 'ok' && cardNote}}">{{cardNote}}</text>
 
         <!-- 来源条目卡列表：点击进词条详情 -->
-        <div class="src-block" show="{{hasResult && sourceList.length > 0}}">
+        <div class="src-block" show="{{phase === 'ok' && sourceList.length > 0}}">
           <text class="src-title">来源</text>
           <div class="src-item" for="{{sourceList}}" @click="openSource($item)">
             <text class="src-item-title">{{$item.title}}</text>
             <text class="src-item-tag">{{$item.tagText}}</text>
           </div>
-        </div>
-
-        <!-- ===== 数据缺失错误卡（global.aiResult 缺失/无回答） ===== -->
-        <div class="error-card" show="{{!hasResult}}">
-          <text class="error-title">回答丢失</text>
-          <text class="error-text">回答数据不存在，请重新提问</text>
         </div>
 
         <!-- 重新提问：replace 回提问页 -->
@@ -94,10 +97,12 @@
   .src-item-title { font-size: 24px; color: #FFFFFF; }
   .src-item-tag { font-size: 18px; color: #757575; margin-top: 4px; }
 
-  /* 错误卡（aiResult 缺失） */
-  .error-card { width: 100%; background-color: #1C1C1E; border-radius: 18px; padding: 18px 22px; margin-bottom: 12px; flex-direction: column; align-items: center; flex-shrink: 0; }
-  .error-title { font-size: 20px; font-weight: bold; color: #EA4335; margin-bottom: 4px; text-align: center; }
-  .error-text { font-size: 16px; color: #757575; text-align: center; }
+  /* 状态卡三态（v1.16.125）：loading 灰字 / error 红字 / ok 高度归零不占位。
+     注意本运行时 show=false 仍占位，故 ok 态用类把高度与内距一并归零，不依赖 show */
+  .state-card { width: 100%; background-color: #1C1C1E; border-radius: 14px; padding: 10px 16px; margin-bottom: 7px; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .state-card-hidden { height: 0; padding: 0; margin-bottom: 0; overflow: hidden; background-color: transparent; }
+  .state-text { font-size: 17px; color: #757575; text-align: center; }
+  .state-text-error { font-size: 18px; font-weight: bold; color: #EA4335; text-align: center; }
 
   /* 重新提问胶囊：深灰次要色（对齐 detail.ux back-bar） */
   .retry-btn { width: 100%; height: 44px; border-radius: 14px; background-color: #2C2C2E; justify-content: center; align-items: center; margin-top: 8px; flex-shrink: 0; }
@@ -122,9 +127,9 @@
     .src-item { width: 90%; border-radius: 32px; padding: 24px 28px; margin-bottom: 14px; }
     .src-item-title { font-size: 30px; }
     .src-item-tag { font-size: 24px; margin-top: 8px; }
-    .error-card { width: 90%; border-radius: 32px; padding: 24px 28px; margin-bottom: 14px; }
-    .error-title { font-size: 40px; margin-bottom: 10px; }
-    .error-text { font-size: 30px; }
+    .state-card { width: 90%; border-radius: 32px; padding: 24px 28px; margin-bottom: 14px; }
+    .state-text { font-size: 30px; }
+    .state-text-error { font-size: 34px; }
     .retry-btn { width: 90%; height: 112px; border-radius: 32px; margin-top: 14px; }
     .retry-text { font-size: 35px; }
   }
@@ -134,9 +139,26 @@
   import router from '@system.router'
 
   export default {
+    computed: {
+      // 状态卡类（v1.16.125）：ok 时高度归零不占位；error 时红字
+      stateCardClass() {
+        if (this.phase === 'ok') return 'state-card state-card-hidden'
+        return 'state-card'
+      },
+      stateTextClass() { return this.phase === 'error' ? 'state-text state-text-error' : 'state-text' },
+      stateText() {
+        if (this.phase === 'error') return '回答丢失，请重新提问'
+        if (this.phase === 'loading') return '加载中…'
+        return ''
+      }
+    },
+
     private: {
-      // 是否有回答数据（global.aiResult 缺失时显示错误卡 + 重新提问）
-      hasResult: false,
+      // v1.16.125 三态：loading（初值→显示「加载中…」）/ ok（有回答）/ error（红字提示）
+      // 原布尔判据初值 false 会让错误卡首帧即渲染 = 主人看到的「先闪一下红色」
+      phase: 'loading',
+      _errTimer: null,
+      isDestroyed: false,
       question: '',
       answer: '',
       cardSummary: '',
@@ -148,9 +170,32 @@
 
     // global.aiResult 由主界面 AI 面板写入（跨页数据经 global 桥接——页面作用域模块实例隔离）
     onShow() {
+      // 正常流程：主界面 AI 面板是拿到结果才 push 进来的，此处数据必然已就绪 → 直接进 ok，零闪烁
+      if (this._applyResult()) return
+      // 异常路径（数据缺失/被清）：先留在 loading 显示「加载中…」，
+      // 1.5s 内若数据仍未到才转 error 显红字（避免手机回调稍慢就报红）
+      var self = this
+      if (this._errTimer) { clearTimeout(this._errTimer); this._errTimer = null }
+      this._errTimer = setTimeout(function () {
+        self._errTimer = null
+        if (self.isDestroyed) return
+        if (!self._applyResult()) self.phase = 'error'
+      }, 1500)
+    },
+
+    onHide() {
+      if (this._errTimer) { clearTimeout(this._errTimer); this._errTimer = null }
+    },
+
+    onDestroy() {
+      this.isDestroyed = true
+      if (this._errTimer) { clearTimeout(this._errTimer); this._errTimer = null }
+    },
+
+    // 读取 global.aiResult 落页面状态；有数据返回 true（并把 phase 置 ok）
+    _applyResult() {
       var r = (typeof global !== 'undefined') ? global.aiResult : null
       if (r && r.answer) {
-        this.hasResult = true
         this.question = r.question || ''
         this.answer = r.answer
         // v1.16.101 结构化作答卡：summary/分节（body 预拼要点行）/尾注
@@ -182,9 +227,10 @@
           })
         }
         this.sourceList = list
-      } else {
-        this.hasResult = false
+        this.phase = 'ok'
+        return true
       }
+      return false
     },
 
     // 来源条目 → 词条详情（gid=全局条目 id，与首页/资料页 gotoDetail 同款路由）
