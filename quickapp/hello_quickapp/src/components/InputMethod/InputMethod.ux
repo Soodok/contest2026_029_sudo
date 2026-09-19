@@ -335,6 +335,8 @@ export default {
     cvalList: [0, 1, 2, 3, 4],
     percent67: 52,
     percent66: 0,
+    // v1.16.135：候选栏当前横向滚动位置（供 resetReslutList 判断是否已在顶部，避免无谓 scrollTo）
+    _cvalScrollX: 0,
     // 针对screenShape为rect的设备，会自动获取screenWidth并绑定到根div
     // 这样便能同时适配n67和o65甚至是后续设备，但实际效果可能受designWidth影响
     screenWidth: 336,
@@ -381,7 +383,8 @@ export default {
     this.$watch("maxlength", "watchMaxLengthPropsChange");
   },
   addAllTxt(txt) {
-    console.log('[KB] addAllTxt txt=' + txt)
+    // v1.16.135（性能审查二轮）：删掉每输入一个字符 / 每选一次候选词都打的 console.log ——
+    // 真机上 console 走日志通道，而打字是最高频交互（v1.16.130 只清了页面侧的同名日志）
     this.$emit("complete", { content: txt });
   },
   onRsSelect(txt) {
@@ -393,7 +396,7 @@ export default {
     this.downFlag = "";
   },
   onBtnClick(sign) {
-    console.log('[KB] onBtnClick cmd=' + sign)
+    // v1.16.135：同上 —— 每次删除/空格/切语言都会走到这里
     this.onVibrate();
     switch (sign) {
       case "AC":
@@ -502,12 +505,15 @@ export default {
     this.lastWaitingStr = "";
   },
   resetReslutList() {
-    if (this.screentype != "circle") {
+    // v1.16.135（性能审查二轮）：原实现无条件 scrollTo —— 拼音每次键入都会调到本方法，
+    // 而滚动位置通常已在顶部。加同值判断，仅在确实需要回顶时才执行滚动。
+    if (this.screentype != "circle" && this._cvalScrollX !== 0) {
       this.$element("cvalWaiting").scrollTo({
         top: 0,
         left: 0,
         behavior: "smooth",
       });
+      this._cvalScrollX = 0;
     }
     let watingStr = "";
     if (this.lastWaitingStr && this.lastWaitingStr[this.waitingIndex]) {
@@ -593,10 +599,15 @@ export default {
     }
   },
   handelScroll(event) {
-    let percentTemp67 = (event.scrollX / 636) * 100 + 52.8;
-    this.percent67 = parseInt(percentTemp67 <= 100 ? percentTemp67 : 100);
-    let percentTemp66 = (event.scrollX / 633) * 100;
-    this.percent66 = parseInt(percentTemp66 <= 100 ? percentTemp66 : 100);
+    // v1.16.135（性能审查二轮）：加同值短路 —— 原实现每次滚动事件都做 2 次响应式赋值，
+    // 而取整后的值在多数帧里不变，却会驱动 progress 组件重渲染。
+    let percentTemp67 = parseInt((event.scrollX / 636) * 100 + 52.8);
+    percentTemp67 = percentTemp67 <= 100 ? percentTemp67 : 100;
+    if (this.percent67 !== percentTemp67) this.percent67 = percentTemp67;
+    let percentTemp66 = parseInt((event.scrollX / 633) * 100);
+    percentTemp66 = percentTemp66 <= 100 ? percentTemp66 : 100;
+    if (this.percent66 !== percentTemp66) this.percent66 = percentTemp66;
+    this._cvalScrollX = event.scrollX || 0;   // 供 resetReslutList 判断是否已在顶部
   },
   pushCval() {
     this.onVibrate();
