@@ -12,8 +12,10 @@
              轻量运行时偶发 DOM 乱序 → 详情字段卡跑到最顶、页头标题消失
              （= 主人反复看到的『信息内容上下反』，数据兜底修不了渲染竞态）。
              show 写法零插拔，卡片顺序恒定；标题/年份有兜底值不会出空卡 -->
-        <!-- 加载中 -->
-        <div class="header-card" show="{{loading}}">
+        <!-- 加载中（v1.16.119：本运行时 show=false 会「隐藏但保留占位」，此卡导致详情页首卡下移 76px
+             （实测 y136 vs 预算 60）→ 改用 if，加载完成即移除节点。其余卡片仍 show 常驻，
+             只有这一个节点参与插拔，不构成 v1.16.84 的多节点同时翻转条件 -->
+        <div class="header-card" if="{{loading}}">
           <text class="loading-text">加载中...</text>
         </div>
 
@@ -81,7 +83,7 @@
   .detail-scroll { width: 100%; height: 100%; flex-direction: column; align-items: center; padding: 0 20px; }
 
   /* v1.16.107 方屏密度强化（主人定案：一屏尽收） */
-  .top-spacer { width: 100%; height: 12px; flex-shrink: 0; }
+  .top-spacer { width: 100%; height: 8px; flex-shrink: 0; }
   .bottom-spacer { width: 100%; height: 30px; flex-shrink: 0; }
 
   .header { width: 90%; height: 40px; justify-content: center; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
