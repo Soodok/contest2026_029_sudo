@@ -450,7 +450,6 @@
       curPage: 0,
       dotsTop: 200,
       catScrollTimer: null,
-      catScrollMT: 61,          // 分类行上边距（搜索态 0：隐藏节点仍贡献 margin，防间距虚增）
       pageScrollTimer: null,
       snapParams: { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: true },
       displayCats: [],
@@ -523,6 +522,14 @@
         return this.searchQuery + (this.showKeyboard ? '_' : '')
       },
       // 搜索框状态类：语音态变高、有词缩边距（手环9固件禁动态style，改类切换）
+      // v1.16.111：分类行上边距改为 computed（自动跟随搜索态/键盘态，免手动同步）
+      // 胶囊屏键盘弹起（空词搜索框点击）时图标下移藏入键盘后——原 61 会从键盘上缘凸出 25px（主人反馈）；
+      // 100 = 203(盒底) + 100 = 303 > 键盘顶 289，完全隐藏且留 14px 余量
+      catScrollMT() {
+        if (this.aiMode || this.searchActive) return 0
+        if (this.showKeyboard && this.screentype === 'pill-shaped') return 100
+        return 61
+      },
       searchBoxClass() {
         var c = 'searchbox-normal'
         if (this.voiceActive) c = 'searchbox-voice'
@@ -1138,7 +1145,6 @@
       this._lastLayoutAt = Date.now()
       var full = this._fullScreenH || 429
       this.screen1H = searching ? this._searchHeaderH() : full
-      this.catScrollMT = searching ? 0 : 61   // 搜索态清零分类行外边距（v1.16.96）
     },
 
     // 进入搜索：搜索框/搜索按钮只弹键盘（分类行保留、被键盘盖住，无内容替换切换感）；
