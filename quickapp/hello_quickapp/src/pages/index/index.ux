@@ -1414,6 +1414,21 @@
       this.searched = false
       var self = this
       setTimeout(function() { self.isClearing = false }, 200)
+      // v1.16.132（主人要求）：搜索栏为空 → 自动回主界面。
+      // 延迟 300ms 与进入搜索的布局翻转错开（防两轮翻转在半秒内连续发生，v1.16.39/40 教训）；
+      // 期间又输入词则取消。与「空词搜索」分支的差异：本场景是用户主动清空，
+      // 故键盘开着也退出（先收键盘）—— 若用户清空后立刻点搜索框，enterSearch 会
+      // clearTimeout 掉这个定时器（v1.16.60 既有守卫），不会误退。
+      if (this._emptyExitTimer) clearTimeout(this._emptyExitTimer)
+      this._emptyExitTimer = setTimeout(function() {
+        self._emptyExitTimer = null
+        if (self.isDestroyed) return
+        if (!self.searchActive) return
+        if (self.searchQuery && self.searchQuery.trim()) return   // 期间又输入了 → 留在搜索态
+        self.showKeyboard = false
+        self.log('[HOME-SEARCH] 搜索栏已清空，自动回主界面')
+        self.exitSearch()
+      }, 300)
     },
 
     // @complete：键盘逐字符提交，仅追加关键词（不实时搜索——收起键盘才搜一次）；有词时切结果区
