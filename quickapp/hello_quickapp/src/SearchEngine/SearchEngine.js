@@ -54,7 +54,11 @@ var C = {
   },
   
   tokenizer: {
-    minEnglishPrefix: 3,
+    // v1.16.148（主人二次反馈）：3 → 1。英文索引改为**从 1 个字母起建全部前缀**，
+    // 于是搜 "d" 就能列出所有 d 开头的单词（实测 58 条），彻底解决「短查询搜不到」的可用性问题。
+    // ⚠️ 改动此值必须同步重建各集的 block（英文集用 tools/rebuild_english_block.py）
+    //    并同步 tools/lib/dataset_core.js —— 两侧规则不一致会导致 token 对不上、条目永远搜不到。
+    minEnglishPrefix: 1,
     delimiters: /[\s,，、]+/
   },
   
@@ -1127,12 +1131,8 @@ async _checkAllMapsCache() {
       var word = words[i]
       if (word.length === 0) continue
       if (/^[a-zA-Z]+$/.test(word)) {
-        // v1.16.147（主人实测）：跳过比 minEnglishPrefix 更短的纯英文词。
-        // 索引侧英文只从 minEnglishPrefix 个字母的前缀起，更短的英文查询不可能命中正确结果，
-        // 只会因「哈希 % bucketSize」的取模碰撞命中无关条目的桶 ——
-        // 实测 hash('d')%2048 == hash('conce')%2048 → 搜 "d" 出 concept/concern。
-        // （中文不受影响：走下方 else 的逐字索引分支，单字查询本身有意义。）
-        if (word.length < minPrefix) continue
+        // v1.16.148：minPrefix 已降为 1，短英文查询本身有正确结果可命中，
+        // 故移除 v1.16.147 的「跳过过短英文词」（那条是为绕开哈希碰撞的临时措施）。
         for (var j = minPrefix; j <= word.length; j++) {
           hashes.push(hashCode(word.substring(0, j).toLowerCase()))
         }

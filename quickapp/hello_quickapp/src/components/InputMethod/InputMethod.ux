@@ -636,7 +636,7 @@ export default {
 }
 .item {
 	height:52px;
-	flex:1
+	flex-shrink:0
 }
 .calbtn0 {
 	color:#fff;
@@ -691,18 +691,21 @@ export default {
 	font-weight:bold;
 	padding-left:8px
 }
+/* v1.16.149（主人实测「更多」页候选字被极度挤压）：
+   原 left:78px + width:324px → 右边界 402px，超出方屏 336 / 胶囊 300（该值抄自更宽的画布）。
+   改用百分比：对任意 designWidth 与屏宽都自适应（5% ~ 95% 区间）。 */
 .list3 {
 	position:absolute;
 	top:38px;
-	left:78px;
-	width:324px;
-	height:160px;
+	left:5%;
+	width:90%;
+	height:260px;   /* v1.16.150：160→260（原值配合 flex:1 压扁显示，移除 flex 后需加大才够多行） */
 	flex-direction:column;
 	background-color:#262626;
 	border-radius:12px
 }
 .item3 {
-	width:324px;
+	width:100%;
 	height:52px
 }
 .calbtn67 {
