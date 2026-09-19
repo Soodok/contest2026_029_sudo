@@ -87,9 +87,12 @@
       <!-- v1.16.133（主人要求）：本页语音态与主界面一致 —— 未连接显示蓝牙断开图标 + 提示，
            已连接显示链路文案（聆听中… / 聆听中·演示） -->
       <div class="voice-panel" if="{{voiceActive}}">
-        <image class="voice-bt-off" src="/common/icons/bluetooth_off.png" if="{{!bluetoothConnected}}"></image>
-        <text class="voice-tip" if="{{!bluetoothConnected}}">蓝牙未连接</text>
-        <text class="voice-tip" if="{{bluetoothConnected}}">{{voiceText}}</text>
+        <!-- v1.16.134：内容区固定高度 —— 两种连接状态内容行数不同，靠固定高度保证取消按钮位置不漂移 -->
+        <div class="voice-info">
+          <image class="voice-bt-off" src="/common/icons/bluetooth_off.png" if="{{!bluetoothConnected}}"></image>
+          <text class="voice-tip" if="{{!bluetoothConnected}}">蓝牙未连接</text>
+          <text class="voice-tip" if="{{bluetoothConnected}}">{{voiceText}}</text>
+        </div>
         <div class="voice-cancel" @click="exitVoiceSearch">
           <text class="voice-cancel-text">取消</text>
         </div>
@@ -177,11 +180,16 @@
   .more-btn { width: 94%; margin-left: 3%; height: 64px; border-radius: 14px; background-color: #2C2C2E; justify-content: center; align-items: center; margin-top: 4px; margin-bottom: 8px; flex-shrink: 0; }
   .more-text { font-size: 22px; color: #4D9FEE; }
 
-  .voice-panel { width: 100%; flex-direction: column; align-items: center; margin-top: 30px; }
+  /* v1.16.134（主人要求）：与主界面一致 —— 面板撑满剩余高度，取消按钮 margin-top:auto 贴底 */
+  /* v1.16.134（主人要求）：取消按钮贴屏幕底部。面板在 scroll 内容流内，flex:1 撑不开 →
+     用固定高度 + 取消按钮 margin-top:auto（容器有确定高度后 auto 才有依据） */
+  /* v1.16.134：space-between —— 内容贴顶、取消按钮贴底（不用 flex:1 / auto margin，本运行时实测无效） */
+  .voice-panel { width: 100%; height: 326px; flex-direction: column; justify-content: space-between; align-items: center; padding-top: 30px; padding-bottom: 24px; flex-shrink: 0; }
+  .voice-info { width: 100%; flex-direction: column; align-items: center; flex-shrink: 0; }
   .voice-tip { font-size: 26px; color: #4D9FEE; margin-bottom: 20px; }
   /* v1.16.133：蓝牙未连接图标（尺寸对齐主界面 .voice-bt-off） */
   .voice-bt-off { width: 50px; height: 50px; margin-bottom: 12px; }
-  .voice-cancel { width: 200px; height: 64px; border-radius: 32px; background-color: #2C2C2E; justify-content: center; align-items: center; }
+  .voice-cancel { width: 200px; height: 64px; border-radius: 32px; background-color: #2C2C2E; justify-content: center; align-items: center; flex-shrink: 0; }
   .voice-cancel-text { font-size: 22px; color: #FFFFFF; }
 
   /* 键盘区（同主界面：absolute 底部，不占布局流）。
@@ -237,6 +245,7 @@
     .more-btn { height: 96px; border-radius: 30px; }
     .more-text { font-size: 34px; }
     .voice-tip { font-size: 34px; margin-bottom: 30px; }
+    .voice-panel { height: 470px; padding-top: 40px; padding-bottom: 40px; }
     .voice-cancel { width: 260px; height: 92px; border-radius: 46px; }
     .voice-cancel-text { font-size: 32px; }
     .kb-pill { width: 100%; }

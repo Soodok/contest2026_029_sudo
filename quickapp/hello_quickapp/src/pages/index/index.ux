@@ -73,9 +73,12 @@
 
         <!-- 语音聆听态：蓝牙未连接显示断开图标+提示，已连接显示波形动画（随音量）；取消按钮 -->
         <div class="voice-panel" if="{{voiceActive}}">
-          <image class="voice-bt-off" src="/common/icons/bluetooth_off.png" if="{{!bluetoothConnected}}"></image>
-          <text class="voice-tip" if="{{!bluetoothConnected}}">蓝牙未连接</text>
-          <text class="voice-tip" if="{{bluetoothConnected}}">{{voiceStatusText}}</text>
+          <!-- v1.16.134：内容区固定高度 —— 已连接/未连接内容行数不同，靠固定高度保证取消按钮位置不漂移 -->
+          <div class="voice-info">
+            <image class="voice-bt-off" src="/common/icons/bluetooth_off.png" if="{{!bluetoothConnected}}"></image>
+            <text class="voice-tip" if="{{!bluetoothConnected}}">蓝牙未连接</text>
+            <text class="voice-tip" if="{{bluetoothConnected}}">{{voiceStatusText}}</text>
+          </div>
           <div class="voice-cancel" @click="exitVoiceSearch">
             <text class="voice-cancel-text">取消</text>
           </div>
@@ -278,10 +281,17 @@
   .search-btn-l { margin-right: 4px; background-color: #34A853; }
   .search-btn-r { margin-left: 4px; background-color: #7B5CFF; }
   .search-icon { width: 22px; height: 22px; margin-right: 6px; flex-shrink: 0; }
-  .voice-panel { width: 100%; flex: 1; flex-direction: column; justify-content: center; align-items: center; }
+  /* v1.16.134（主人要求）：取消按钮贴屏幕底部 —— 面板撑满剩余高度，取消按钮用 margin-top:auto
+     推到底（绝对定位在本运行时的 flex 容器内不渲染，故走常规流） */
+  /* v1.16.134（主人要求）：取消按钮贴屏幕底部。面板在 scroll 内容流内，flex:1 撑不开
+     （项目铁律「flex:1 不可靠」）→ 用**固定高度**，容器有确定高度后 margin-top:auto 才有依据 */
+  /* v1.16.134：space-between —— 内容贴顶、取消按钮贴底；不依赖 flex:1 / auto margin
+     （两者在本运行时均实测无效），也不需按连接状态调间距 */
+  .voice-panel { width: 100%; height: 326px; flex-direction: column; justify-content: space-between; align-items: center; padding-top: 30px; padding-bottom: 24px; flex-shrink: 0; }
+  .voice-info { width: 100%; flex-direction: column; align-items: center; flex-shrink: 0; }
   .voice-tip { font-size: 24px; color: #FFFFFF; margin-bottom: 12px; }
   .voice-bt-off { width: 50px; height: 50px; margin-bottom: 12px; }
-  .voice-cancel { width: 160px; height: 56px; border-radius: 28px; background-color: #3A3A3C; justify-content: center; align-items: center; margin-top: 30px; }
+  .voice-cancel { width: 160px; height: 56px; border-radius: 28px; background-color: #3A3A3C; justify-content: center; align-items: center; flex-shrink: 0; }
   .voice-cancel-text { font-size: 24px; color: #FFFFFF; }
   .search-text { font-size: 22px; color: #FFFFFF; font-weight: 400; }
 
@@ -433,7 +443,8 @@
     .search-icon { width: 34px; height: 34px; margin-right: 10px; }
     .voice-tip { font-size: 36px; margin-bottom: 20px; }
     .voice-bt-off { width: 80px; height: 80px; margin-bottom: 20px; }
-    .voice-cancel { width: 220px; height: 88px; border-radius: 44px; margin-top: 40px; }
+    .voice-panel { height: 470px; padding-top: 40px; padding-bottom: 40px; }
+    .voice-cancel { width: 220px; height: 88px; border-radius: 44px; }
     .voice-cancel-text { font-size: 36px; }
     .voice-text { font-size: 28px; }
     .search-text { font-size: 35px; }
