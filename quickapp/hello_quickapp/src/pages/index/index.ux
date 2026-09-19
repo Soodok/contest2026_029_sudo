@@ -97,7 +97,10 @@
              这行消失、下方卡片整体上顶一下；流式布局下保留它无任何副作用 -->
         <text class="result-count" if="{{searched && !loading && !aiMode}}">共 {{totalCount}} 条结果</text>
         <text class="engine-tip" if="{{showEngineTip}}" @click="goSettings">数据未就绪 · 点此去设置检查</text>
-        <div class="result-item" for="{{visibleList}}" @click="gotoDetail($item.id)">
+        <!-- v1.16.130（性能审查 T0①）：tid 指定稳定唯一键 —— 框架按 key diff，翻页 concat /
+             新搜索整表替换时，内容未变的节点不再逐个 setDomAttributes（手环固件此通道既慢又脆）。
+             列表项的 id 是跨集全局 id，天然唯一稳定 -->
+        <div class="result-item" tid="id" for="{{visibleList}}" @click="gotoDetail($item.id)">
           <!-- 三行类名由 DatasetManager 按 meta.display.card 预拼完整类名（纯变量插值，禁拼接表达式） -->
           <text class="{{$item.yearClass}}">{{$item.yearDisplay}}</text>
           <text class="{{$item.titleClass}}">{{$item.title}}</text>
@@ -1226,7 +1229,11 @@
       // 翻转即记录时间：节流窗口覆盖全部布局变更源（含 clearSearch/onDelete 等未接 guard 的入口）
       this._lastLayoutAt = Date.now()
       var full = this._fullScreenH || 429
-      this.screen1H = searching ? this._searchHeaderH() : full
+      var h = searching ? this._searchHeaderH() : full
+      // v1.16.130（性能审查 T1④）：同值短路 —— 打字时每字符都会调到这里，而值通常不变；
+      // 每次都赋 screen1H 会触发一次布局重算（真机上可观）
+      if (this.screen1H === h) return
+      this.screen1H = h
     },
 
     // 进入搜索：搜索框/搜索按钮只弹键盘（分类行保留、被键盘盖住，无内容替换切换感）；
@@ -1398,7 +1405,8 @@
     // v1.16.91：AI 面板打开时键盘输入追加进 aiQuestion（不进搜索框、不触发搜索态）
     onInput(evt) {
       var content = evt.detail.content
-      console.log('[KB] page onInput content=' + content)
+      // v1.16.130（性能审查 T1④）：删掉每字符一次的 console.log —— 真机上 console 走日志通道，
+      // 而打字是最频繁的交互，这条日志是确定性开销
       if (content === undefined || content === null) return
       if (this.aiMode) {
         this.aiQuestion += content
@@ -1550,6 +1558,12 @@
           this.displayList = this.displayList.concat(formatted)
           if (this.displayList.length > MAX_ROWS) {
             this.displayList = this.displayList.slice(this.displayList.length - MAX_ROWS)
+            // v1.16.130（性能审查 T3）：头部裁剪后可见数可能大于新长度 → 列表视觉上跳一下，同步对齐
+            if (this.visibleCount > this.displayList.length) this.visibleCount = this.displayList.length
+          }
+          // v1.16.130：翻页带来新数据 → 放开可见数（每次 +20），保证新数据可见且单次新增节点可控
+          if (!result.allLoaded) {
+            this.visibleCount = Math.min(this.displayList.length, (this.visibleCount || 5) + 20)
           }
         }
         this.totalCount = result.total || 0
@@ -1578,7 +1592,16 @@
     // 显示更多（v1.16.26）：每次追加 5 条；若本地已显示完但仍未加载完全部结果，
     // 顺带拉下一页（这样「更多」既能展开本地已取到的，也能继续向后取）
     showMore() {
-      this.visibleCount = (this.visibleCount || 5) + 5
+      // v1.16.130（性能审查 T0③）：渐进渲染加软上限 —— 原实现每次 +5 无上限，连点到底会把
+      // 上百条 × 4 节点一次性插入手环 DOM，是「点几下突然卡死」的典型成因（翻页路径有
+      // MAX_ROWS=100 兜底，这条没有）。到顶后改为触发翻页继续加载。
+      var SOFT_MAX = 40
+      var next = Math.min((this.visibleCount || 5) + 5, SOFT_MAX)
+      if (next === this.visibleCount) {
+        if (!this.allLoaded && !this.loading) this.loadPage(this.currentPage + 1)
+        return
+      }
+      this.visibleCount = next
       if (this.visibleCount >= this.displayList.length && !this.allLoaded && !this.loading) {
         this.loadPage(this.currentPage + 1)
       }

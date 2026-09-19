@@ -1395,11 +1395,23 @@ async _checkAllMapsCache() {
       var start = (page - 1) * pageSize
       var end = Math.min(start + pageSize, st.rows.length)
       var results = []
+      // v1.16.130（性能审查 T0②）：先把本页涉及的所有 Map 一次性载齐，再走纯内存切片。
+      // 原实现是循环内逐条 `if (!map) await this._ensureMap(r.mapId)` —— 候选分散在 >2 个 map
+      // 且翻深页时会来回淘汰重载（载 map3 → 挤掉 map1 → 要用 map1 → 重载 map1 → 挤掉 map2…），
+      // 一次翻页触发多次重复 I/O 与 JSON.parse，表现为翻页偶发长顿。
+      var _needMaps = {}
+      for (var i0 = start; i0 < end; i0++) _needMaps[st.rows[i0].mapId] = true
+      var _needIds = Object.keys(_needMaps)
+      var _savedMaxMaps = this.maxLoadedMaps
+      var _raisedMapsTo = -1
+      if (_needIds.length > _savedMaxMaps) { this.maxLoadedMaps = _needIds.length; _raisedMapsTo = _needIds.length }
+      for (var k0 = 0; k0 < _needIds.length; k0++) {
+        var mid = Number(_needIds[k0])
+        if (!this.mapData[mid]) await this._ensureMap(mid)
+      }
       for (var i = start; i < end; i++) {
         var r = st.rows[i]
         var map = this.mapData[r.mapId]
-        // 缓存被清（清缓存/新搜索）后自愈：重载该 map
-        if (!map) map = await this._ensureMap(r.mapId)
         if (!map) continue
         var index = map.idToIndex ? map.idToIndex[r.id] : -1
         if (index === undefined || index === -1) continue
@@ -1418,6 +1430,8 @@ async _checkAllMapsCache() {
           impact: null
         })
       }
+      // v1.16.130：还原 LRU 上限（所有权标记 —— 仅当值仍属本次抬升时才还原，防并发搜索互相覆盖）
+      if (_raisedMapsTo > 0 && this.maxLoadedMaps === _raisedMapsTo) this.maxLoadedMaps = _savedMaxMaps
       stepTimings['5_构建结果'] = Date.now() - t5
       var allLoaded = st.loadedCount >= st.mapRank.length
 

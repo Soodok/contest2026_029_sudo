@@ -45,7 +45,7 @@
         </div>
         <scroll class="ds-tags-scroll" scroll-x="{{true}}">
           <div class="ds-tags">
-            <div class="{{$item.cls}}" for="{{dsTags}}" @click="pickTag($item)">
+            <div class="{{$item.cls}}" tid="value" for="{{dsTags}}" @click="pickTag($item)">
               <text class="ds-tag-text">{{$item.label}}</text>
             </div>
           </div>
@@ -68,7 +68,8 @@
         <text class="empty-tip" if="{{!loading && !searched}}">输入关键词，收起键盘开始搜索</text>
         <!-- 结果总数（对齐首页「共 N 条结果」）；本地 list 计数为兜底（引擎 total 缺失时） -->
         <text class="result-count" if="{{searched && !loading}}">共 {{totalCount}} 条</text>
-        <div class="result-item" for="{{visibleList}}" @click="gotoDetail($item.id)">
+        <!-- v1.16.130（性能审查 T0①）：同 index.ux，列表项 id 稳定唯一 -->
+        <div class="result-item" tid="id" for="{{visibleList}}" @click="gotoDetail($item.id)">
           <text class="{{$item.yearClass}}">{{$item.yearDisplay}}</text>
           <text class="{{$item.titleClass}}">{{$item.title}}</text>
           <text class="{{$item.catClass}}">{{$item.region}}</text>

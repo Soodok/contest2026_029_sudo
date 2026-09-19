@@ -9,7 +9,8 @@
         <text class="empty-tip" if="{{!loading && favorites.length === 0}}">暂无收藏 · 在详情页点击收藏添加</text>
 
         <!-- 收藏列表：点击条目主体进入详情，右侧 ✕ 移除（fav-info / fav-del 为兄弟节点，互不冒泡） -->
-        <div class="fav-item" for="{{favorites}}">
+        <!-- v1.16.130（性能审查 T0①）：收藏增删时按 key diff，未变节点不重设属性 -->
+        <div class="fav-item" tid="id" for="{{favorites}}">
           <div class="fav-info" @click="gotoDetail($item.id)">
             <text class="fav-title">{{$item.title}}</text>
             <text class="fav-sub">{{$item.yearDisplay}} · {{$item.region}}</text>

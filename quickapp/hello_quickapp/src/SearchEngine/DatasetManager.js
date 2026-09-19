@@ -324,9 +324,13 @@ async function warmupOne(ds, onProgress, keepAlive) {
   var eng = ensureEngine(ds)
   if (!eng.isReady) await eng._lazyInit()
   if (onProgress) { try { onProgress(30, '读取资料元数据') } catch (e) {} }
-  for (var m = 0; m < eng.maps.length; m++) await eng._ensureMap(m)
+  // v1.16.130（性能审查 T1⑥）：每步让出一帧 —— _ensureMap/_ensureChunk 内含大字符串 JSON.parse，
+  // 是 JS 线程同步 CPU 操作；后台预热在用户滑首页时跑会掉帧（init 路径早有「每 3 个歇 100ms」
+  // 的节拍，warmupOne 之前没有）。让出后预热总时长几乎不变，但不再和 UI 抢主线程。
+  var _yield = function () { return new Promise(function (r) { setTimeout(r, 0) }) }
+  for (var m = 0; m < eng.maps.length; m++) { await eng._ensureMap(m); await _yield() }
   if (onProgress) { try { onProgress(60, '建立检索索引') } catch (e) {} }
-  for (var c = 0; c < eng.chunks.length; c++) await eng._ensureChunk(c)
+  for (var c = 0; c < eng.chunks.length; c++) { await eng._ensureChunk(c); await _yield() }
   if (!keepAlive) {
     // 流式释放：缓存已持久化，实例内存池（loadedMaps/loadedChunks）随实例一起丢弃
     delete engines[ds.id]
