@@ -88,8 +88,11 @@ var C = {
   
   mapPreload: {
     enabled: true,           // 是否启用预加载
-    // v1.16.61：与 LRU 上限对齐（Map 最多留 4，预载超限即淘汰）
-    maxMaps: 4,               // 最多预加载几个 Map（0 = 全部加载）
+    // v1.16.177（独立审查修复）：预载上限必须与 LRU 上限对齐 —— maxLoadedMaps 已于
+    // v1.16.94 从 4 收紧到 2，而这里仍是 4 且注释写「Map 最多留 4」（旧值）→
+    // 预载 4 张 Map 会有 2 张立刻被 LRU 淘汰，等于白读白解析（blockPreload 的注释
+    // 早就写明「预载超限只会立刻被淘汰，是无效 I/O」，Map 侧漏改了）。
+    maxMaps: 2,               // 最多预加载几个 Map（0 = 全部加载）
     preloadOnInit: true      // 是否在完整初始化（非快速启动）时预加载
   },
   // ⚠️ 生产环境关闭：引擎内部每一步都会 _logInfo/_logSuccess，真机上日志写入本身
