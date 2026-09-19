@@ -113,7 +113,9 @@
         <text class="empty-tip" if="{{searched && displayList.length === 0 && !loading && !searchError}}">无结果</text>
         <text class="empty-tip" if="{{!searched && displayList.length === 0}}">{{waitTip}}</text>
         <!-- 显示更多（v1.16.26 主人要求：默认只渲染 5 条，点此追加）-->
-        <div class="more-btn" if="{{displayList.length > visibleCount}}" @click="showMore">
+        <!-- v1.16.138：显示条件从「列表长于可见数」改为「还有未搜完的资料集」——
+             现在 visibleCount 恒等于 displayList.length（每批 5 条、列表上限 10 条），原条件永不成立 -->
+        <div class="more-btn" if="{{!allLoaded && displayList.length > 0}}" @click="showMore">
           <text class="more-text">{{moreText}}</text>
         </div>
         <text class="empty-tip" if="{{allLoaded && displayList.length > 0}}">— 已显示全部 —</text>
@@ -519,8 +521,8 @@
       pageScrollTimer: null,
       snapParams: { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: true },
       displayCats: [],
-      // 结果列表渐进显示：默认只渲染 4 条（v1.16.137 起与每批搜索结果数一致）
-      visibleCount: 4,
+      // 结果列表渐进显示：默认 5 条（v1.16.138 起与每批搜索结果数一致）
+      visibleCount: 5,
       // v1.16.131：✕ 清除的时间戳（用于吞掉冒泡到搜索框的同一次点击）
       _clearedAt: 0,
       // AI 搜索（v1.16.33）：aiMode=输入的问题将交给 AssistantEngine.answer 生成回答；
@@ -562,9 +564,9 @@
       displayList: [],
       totalCount: 0,
       currentPage: 1,
-      // v1.16.137（主人定案）：总搜索每批 4 条 —— 该值即 searchAllAsync 的 target
+      // v1.16.138（主人定案）：总搜索每批 5 条 —— 该值即 searchAllAsync 的 target
       // （pageSize × page = 本轮要凑够的卡片数）；一个集凑不够会自动继续下一个集直到凑够
-      pageSize: 4,
+      pageSize: 5,
       loading: false,
       allLoaded: false,
       searched: false,
@@ -644,8 +646,9 @@
         return this.aiAnswer
       },
       moreText() {
-        var rest = this.displayList.length - (this.visibleCount || 5)
-        return rest > 0 ? ('显示更多（还有 ' + rest + ' 条）') : ''
+        // v1.16.138：列表最多留 10 条，「还有 N 条」的语义已不适用（N 是分批累计的）；
+        // 保留按钮本意：继续从后面的资料集取下一批
+        return '显示更多'
       }
     },
 
@@ -1593,21 +1596,19 @@
         })
         // 列表封顶（v1.16.25）：原先无限 concat，翻 10 页即 200 条 × 4 个节点 = 800 节点，
         // 手环上直接拖垮渲染；同时它也是下方高度公式线性膨胀的根源。只保留最近 MAX_ROWS 条。
-        var MAX_ROWS = 100
+        // v1.16.138（主人定案）：一页最多停留 10 条 —— 多次点「更多」后前面多余的刷新掉，
+        // 防列表无限扩张（原 MAX_ROWS=100 只是防爆上限，不解决"越点越长"）
+        var MAX_PAGE_ITEMS = 10
         if (page === 1) {
           this.displayList = formatted
-          // v1.16.137：每批就是 4 条（searchAllAsync 的 target），全部展开即可
-          this.visibleCount = formatted.length
         } else {
           this.displayList = this.displayList.concat(formatted)
-          if (this.displayList.length > MAX_ROWS) {
-            this.displayList = this.displayList.slice(this.displayList.length - MAX_ROWS)
-            // v1.16.130（性能审查 T3）：头部裁剪后可见数可能大于新长度 → 列表视觉上跳一下，同步对齐
-            if (this.visibleCount > this.displayList.length) this.visibleCount = this.displayList.length
-          }
-          // v1.16.137：每批 4 条，追加后全部展开（单次新增节点可控）
-          this.visibleCount = this.displayList.length
         }
+        if (this.displayList.length > MAX_PAGE_ITEMS) {
+          this.displayList = this.displayList.slice(this.displayList.length - MAX_PAGE_ITEMS)
+        }
+        // 每批 5 条、列表上限 10 条 → 可见数即列表长度（无需再单独维护）
+        this.visibleCount = this.displayList.length
         this.totalCount = result.total || 0
         this.currentPage = page
         this.loading = false
@@ -1634,16 +1635,11 @@
     // 显示更多（v1.16.26）：每次追加 5 条；若本地已显示完但仍未加载完全部结果，
     // 顺带拉下一页（这样「更多」既能展开本地已取到的，也能继续向后取）
     showMore() {
-      // v1.16.137（主人定案）：点「显示更多」= 从**下一个资料集**继续搜索（每批 4 条）。
-      // 总搜索现在是「顺序逐集累加、够 4 条即停」，所以页码 +1 就是「继续往下搜」，
-      // 前几批命中的集走 _searchState 缓存，重复调用很快。
-      if (!this.allLoaded && !this.loading) {
-        this.loadPage(this.currentPage + 1)
-        return
-      }
-      // 所有集都搜过（或已加载完）：纯展开本地已取到的，保留软上限防连点插上百节点
-      var SOFT_MAX = 40
-      this.visibleCount = Math.min((this.visibleCount || 4) + 4, SOFT_MAX)
+      // v1.16.138（主人定案）：避免无意义的多搜索 —— **搜够/搜完就停**。
+      // 每批 5 条；列表最多停留 10 条，点「更多」出下一批（前面的自动刷新掉，见 loadPage）。
+      // 已搜完全部资料集（allLoaded）或正在搜索（loading）时直接返回，不再发起调用。
+      if (this.allLoaded || this.loading) return
+      this.loadPage(this.currentPage + 1)
     },
 
     // 搜索态滚到底：自动加载下一页（键盘弹出时不触发；非搜索态双屏滚动不翻页）
