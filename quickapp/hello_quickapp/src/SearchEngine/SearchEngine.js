@@ -1386,9 +1386,14 @@ async _checkAllMapsCache() {
       // · 翻页（page>1）放开上限，由「更多资料」按钮逐步补齐（用户可接受的渐进语义）。
       // · mapRank 已按候选数降序 → 解析的就是「条数最多的 map」。
       var t3 = Date.now()
-      var MIN_ENOUGH = 4                       // 首批至少 4 条（主人定案：至少 4、至多显示 5）
+      // v1.16.139：每批 5 条 —— MIN_ENOUGH 从 4 对齐到 5（原值与「每批 5 条」不一致）
+      var MIN_ENOUGH = 5
       var need = (page <= 1) ? MIN_ENOUGH : page * pageSize
-      var minMaps = st.forceAll ? st.mapRank.length : 2
+      // v1.16.139（主人反馈「没有中途停止」的根因）：minMaps 原为 2 —— **每个集至少解析 2 个 map**，
+      // 与凑够多少条无关；6 集就是 12 个 map（各约 600 行 JSON.parse）同时/连续解析。
+      // 改为 1：先试 1 个 map，行数不够 need 时由下方 `st.rows.length < need` 自动继续加载 ——
+      // 既保证「够就停」，也保留候选稀疏时的兜底。
+      var minMaps = st.forceAll ? st.mapRank.length : 1
       // 首批兜底上限 4：正常情况「2 个 map 就够 4 条即停」（1 个 map 约 600 行、候选充足），
       // 只有候选稀疏时才继续 —— 与「最多两个 map」两条要求同时满足（硬限 2 会让稀疏查询不足 4 条）
       var maxMaps = st.forceAll ? st.mapRank.length : (page > 1 ? st.mapRank.length : 4)
