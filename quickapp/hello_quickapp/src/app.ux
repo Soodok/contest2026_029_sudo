@@ -2,7 +2,8 @@
   // ========== 搜索引擎（全局引擎初始化，从原 splash.ux 提取到 app 生命周期）==========
   import { getSearchEngine } from './SearchEngine/SearchEngine.js'
   // 应用版本（与 src/manifest.json 的 versionName 保持同步——改版本时两处一起改）
-  const APP_VERSION = '1.16.71'   // ⚠️ 必须与 manifest.json versionName 同步（审查发现落后12版，v1.16.71 同步）
+  const APP_VERSION = '1.16.121'  // ⚠️ 必须与 manifest.json versionName 同步（审查第二次发现脱节：1.16.71 落后 46 版）
+  // 发版检查项：改 manifest.json 的 versionName 时，同一提交内必须改这里（APP_VERSION 用于设置页「关于」展示）
   import { searchAllAsync, getItemByGlobalId, getDatasetEntries, getGroupEntries, getDatasetInfo, warmupAllCaches } from './SearchEngine/DatasetManager.js'
   import { initBtReceiver } from './SearchEngine/BtTransfer.js'
 
@@ -101,67 +102,6 @@
   var engineInstance = null
   var engineInitialized = false
 
-  // 读取设置（含 quick_launch / auto_search / theme / defaultCategory / defaultRegion）
-  function loadSettingsAsync() {
-    return new Promise(function(resolve) {
-      var loaded = 0
-      var total = 5   // 实际 storage.get 数（审查修复：v1.16.57 删两个空读后未同步，导致每次启动靠 3s 超时兜底）
-      var storage = require('@system.storage')
-
-      var checkDone = function() {
-        loaded++
-        if (loaded >= total) resolve()
-      }
-
-      var timeout = setTimeout(function() {
-        resolve()
-      }, 3000)
-
-      storage.get({
-        key: 'quick_launch',
-        success: function(data) {
-          global.quickLaunch = data === 'true'
-          checkDone()
-        },
-        fail: function() {
-          global.quickLaunch = false
-          checkDone()
-        }
-      })
-
-      storage.get({
-        key: 'auto_search',
-        success: function(data) {
-          global.autoSearch = data === 'true'
-          checkDone()
-        },
-        fail: function() {
-          global.autoSearch = false
-          checkDone()
-        }
-      })
-
-      storage.get({
-        key: 'app_theme',
-        success: function(data) { global.theme = data === 'dark' ? 'dark' : 'light'; checkDone() },
-        fail: function() { global.theme = 'light'; checkDone() }
-      })
-
-      storage.get({
-        key: 'defaultCategory',
-        success: function(data) { global.defaultCategory = data || 'all'; checkDone() },
-        fail: function() { global.defaultCategory = 'all'; checkDone() }
-      })
-
-      storage.get({
-        key: 'defaultRegion',
-        success: function(data) { global.defaultRegion = data || 'all'; checkDone() },
-        fail: function() { global.defaultRegion = 'all'; checkDone() }
-      })
-
-      setTimeout(function() { clearTimeout(timeout) }, 3100)
-    })
-  }
 
   // 挂载全局接口（幂等，可在引擎就绪前后多次调用）
   // 引擎就绪后刷新全局量（mapChunkSize / detailChunkSize 在 meta 加载后才准确）。
@@ -372,14 +312,17 @@
       engineInstance = getSearchEngine()
       mountToGlobal()
 
-      // 2. 读取设置
-      //    ⚠️ 不再在此启动 startEngineLoad()：
-      //    loading 页（设置 → 加载数据）会单独调用 engine.init('/common/')，
-      //    若此处也并发 init，同一引擎单例的两个 readText 回调会互相覆盖，
-      //    导致 _loadMeta 的 Promise 永不 resolve、页面卡死在 5%。
-      //    完整加载统一由 loading.ux 单点触发（对应原 splash 的加载逻辑）。
-      loadSettingsAsync().then(function() {
-      })
+      // 2. 读回「设置 → 蓝牙接收」开关（v1.16.120）
+      //    此前 confirm.ux 只写 global.bluetoothReceive + storage，全工程零读取点，
+      //    重启即失效且 BtTransfer 无条件接收 = 假开关（审查报告 #2）。undefined 视为开启。
+      //    注：原 loadSettingsAsync（5 个设置在工程内零读取点，每次启动白读 5 次 storage）已删。
+      try {
+        require('@system.storage').get({
+          key: 'bluetooth_receive',
+          success: function(d) { global.bluetoothReceive = (d !== 'false') },
+          fail: function() { global.bluetoothReceive = true }
+        })
+      } catch (e) { global.bluetoothReceive = true }
     }
   }
 </script>

@@ -1579,8 +1579,7 @@
 
     gotoDetail(id) {
       if (this.showKeyboard) return
-      if (this.$app.$def.isNavigating) return
-      if (this.$app.$def.isNavigating) return
+      if (this.$app.$def.isNavigating) return   // 重复守卫清理（审查报告小瑕疵）
       if (typeof global.addRuntimeLog === 'function') {
         global.addRuntimeLog('从结果页打开详情: ID=' + id, 'info')
       }

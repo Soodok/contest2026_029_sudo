@@ -171,7 +171,7 @@ class SearchEngine {
     this.maxLoadedMaps = C.maxLoadedMaps || 2
     this.loadedMapsOrder = []
     
-    _logInfo('引擎实例创建完成 (v3.4，init')
+    _logInfo('引擎实例创建完成 (v3.4)')   // 审查报告小瑕疵：原字符串被截断，缺右括号
   }
   
   // ========== 工具方法 ==========
@@ -1205,6 +1205,12 @@ async _checkAllMapsCache() {
     _logInfo('需要加载的块: ' + Object.keys(neededChunks).join(','), 'search')
     
     var chunkIds = Object.keys(neededChunks).map(Number)
+    // v1.16.120 修复「多块求交静默吞结果」（审查报告 #3）：候选块数可能超过 LRU 上限
+    // （maxLoadedChunks=2），先加载的块会被后加载的挤掉 → 下面求交读 this.loadedChunks[id]
+    // 得 undefined → candidateSet 被清空 = 假「无结果」。本次查询期间临时把上限抬到候选
+    // 块数（通常 2~4 块，短暂驻留），查完立即还原 —— 不改变常驻内存策略。
+    var _savedMaxChunks = this.maxLoadedChunks
+    if (chunkIds.length > _savedMaxChunks) this.maxLoadedChunks = chunkIds.length
     for (var c = 0; c < chunkIds.length; c++) {
       var chunkData = await this._ensureChunk(chunkIds[c])
       if (!chunkData) {
@@ -1253,6 +1259,7 @@ async _checkAllMapsCache() {
     }
     
     _logInfo('最终候选数: ' + candidateSet.size, 'search')
+    this.maxLoadedChunks = _savedMaxChunks   // v1.16.120 还原 LRU 上限
     return Array.from(candidateSet)
   }
   
@@ -1596,6 +1603,7 @@ async _checkAllMapsCache() {
         try { storage.delete({ key: key }) } catch(e) {}
       }
       this.loadedChunks = {}
+      this.loadedChunksOrder = []   // v1.16.120：同步清 LRU 顺序表（否则留幽灵 id，淘汰顺序失真）
       _logSuccess('所有块缓存已清除', 'cache')
     } catch(e) {
       _logError('清除缓存失败: ' + e.message, 'cache')
@@ -1610,6 +1618,7 @@ async _checkAllMapsCache() {
         try { storage.delete({ key: key }) } catch(e) {}
       }
       this.mapData = {}
+      this.loadedMapsOrder = []   // v1.16.120：同上
       _logSuccess('所有Map缓存已清除', 'cache')
     } catch(e) {
       _logError('清除Map缓存失败: ' + e.message, 'cache')

@@ -69,6 +69,11 @@ function handleMessage(data) {
   if (!msg || !msg.t) return
 
   if (msg.t === 'ds-begin') {
+    // v1.16.120：尊重「设置 → 蓝牙接收」开关（此前只写不读 = 假开关，审查报告 #2）。
+    // undefined 视为开启（保持默认行为不变）；关闭时直接忽略，不跳传输页。
+    var _btAllowed = true
+    try { if (typeof global !== 'undefined' && global.bluetoothReceive === false) _btAllowed = false } catch (e) {}
+    if (!_btAllowed) { _log('蓝牙接收已关闭，忽略 ds-begin: ' + msg.ds); return }
     receiving = { ds: String(msg.ds || ''), name: String(msg.name || msg.ds || ''), total: msg.total || 0, files: {} }
     // 进入专门传输界面（无退出入口，只能手机端停止或传完）
     transfer = { phase: 'receiving', ds: receiving.ds, dsId: '', name: receiving.name, total: receiving.total, done: 0, currentFile: '', error: '' }
