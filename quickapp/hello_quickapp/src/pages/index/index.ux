@@ -49,7 +49,7 @@
     <!-- 两个搜索按钮：矩形左右排列、胶囊/圆形上下排列；左「语音搜索」、右「AI搜索」 -->
         <div class="search-btn-row" if="{{!searchActive && !showKeyboard && !voiceActive}}">
           <div class="search-btn search-btn-l" @click="startVoiceSearch">
-            <image class="search-icon" src="/common/icons/voice.png"></image>
+            <image class="search-icon" src="/common/icons/voice_green.png"></image>
             <text if="{{!isCircle}}" class="search-text">语音</text>
           </div>
           <div class="search-btn search-btn-r" @click="enterAiMode">
@@ -235,11 +235,12 @@
   /* v1.16.89 等宽修正：flex:1 在该运行时失效 → 两按钮按内容收缩不等宽（186 vs 153 实测），
      改固定等宽 154px（336 = 行内边距20 + 间距8 + 154×2），文字/图标水平对齐 */
   /* v1.16.95：content-box 下 136 + 左内边距 14 = 渲染 150；两钮+间距=308，屏幕两侧余 14px */
-  .search-btn { position: relative; width: 136px; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: flex-start; align-items: center; flex-shrink: 0; padding-left: 14px; }
-  .search-btn-l { margin-right: 4px; background-color: #34A853; }
+  /* v1.16.109：内容居中（去左对齐+左内距）——文案精简后居中最均衡（主人定案） */
+  .search-btn { position: relative; width: 136px; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: center; align-items: center; flex-shrink: 0; }
+  /* v1.16.109 风格统一：双钮同深底 + 彩色图标（语音绿话筒 / AI 渐变星）+ 白字 */
+  .search-btn-l { margin-right: 4px; background-color: #2A2A2C; }
   .search-btn-r { margin-left: 4px; background-color: #2A2A2C; }
-  /* v1.16.108：间距 5→2 更贴文字（主人反馈）+ 图标 21→22 */
-  .search-icon { width: 22px; height: 22px; margin-right: 2px; flex-shrink: 0; }
+  .search-icon { width: 22px; height: 22px; margin-right: 6px; flex-shrink: 0; }
   .voice-panel { width: 100%; flex: 1; flex-direction: column; justify-content: center; align-items: center; }
   .voice-tip { font-size: 24px; color: #FFFFFF; margin-bottom: 12px; }
   .voice-bt-off { width: 50px; height: 50px; margin-bottom: 12px; }
@@ -372,7 +373,7 @@
     .search-box { width: 246px; height: 92px; border-radius: 46px; margin-top: 20px; border: 3px solid #3A3A3C; padding-left: 30px; }
     .search-box-icon { width: 40px; height: 40px; }
     .search-btn-row { flex-direction: column; padding-left: 0; padding-right: 0; margin-top: 0; }
-    .search-btn { width: 220px; height: 96px; border-radius: 48px; flex: none; margin-top: 20px; padding-left: 24px; }
+    .search-btn { width: 220px; height: 96px; border-radius: 48px; flex: none; margin-top: 20px; }
     .search-btn-l { margin-right: 0; }
     .search-btn-r { margin-left: 0; }
     .search-icon { width: 34px; height: 34px; margin-right: 10px; }
