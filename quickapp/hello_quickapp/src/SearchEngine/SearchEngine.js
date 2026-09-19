@@ -1386,8 +1386,8 @@ async _checkAllMapsCache() {
       // · 翻页（page>1）放开上限，由「更多资料」按钮逐步补齐（用户可接受的渐进语义）。
       // · mapRank 已按候选数降序 → 解析的就是「条数最多的 map」。
       var t3 = Date.now()
-      // v1.16.139：每批 5 条 —— MIN_ENOUGH 从 4 对齐到 5（原值与「每批 5 条」不一致）
-      var MIN_ENOUGH = 5
+      // v1.16.141：每批 6 条 —— MIN_ENOUGH 同步对齐（原值与「每批 N 条」曾多次脱节）
+      var MIN_ENOUGH = 6
       var need = (page <= 1) ? MIN_ENOUGH : page * pageSize
       // v1.16.139（主人反馈「没有中途停止」的根因）：minMaps 原为 2 —— **每个集至少解析 2 个 map**，
       // 与凑够多少条无关；6 集就是 12 个 map（各约 600 行 JSON.parse）同时/连续解析。

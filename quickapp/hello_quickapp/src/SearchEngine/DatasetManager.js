@@ -187,9 +187,15 @@ async function searchAllAsync(query, options) {
   var searchedAll = true        // 是否把所有集都搜过（未搜完 → allLoaded 必为 false）
   var eachAllLoaded = true
   var accumulated = 0
+  // v1.16.141（主人二次反馈「感觉还是查过数量、没有停止过」）：除「累计够 target 即停」外，
+  // 再加一道**集探索硬上限** —— 原逻辑在多个集都无结果时会把 6 个集全扫一遍，
+  // 这正是主人感受不到"停止"的最后一个来源。达上限后本轮不再探索，剩余集交给「显示更多」。
+  var MAX_PROBE = 4
+  var probed = 0
 
   for (var i = 0; i < order.length; i++) {
     if (accumulated >= target) { searchedAll = false; break }   // 够数即停（主人核心要求）
+    if (probed >= MAX_PROBE) { searchedAll = false; break }     // 探索上限（v1.16.141）
     var ds = order[i]
     if (onlyDsId !== null && ds.id !== onlyDsId) continue
     if (onlyGroup !== null) {
@@ -201,6 +207,7 @@ async function searchAllAsync(query, options) {
     // 筛选激活时只搜历史集（与聚合改造前的单集搜索行为一致）。
     // 标签筛选（region）对【所有集】生效。
     if (category !== 'all' && ds.id !== 0) continue
+    probed++
 
     try {
       var eng = ensureEngine(ds)

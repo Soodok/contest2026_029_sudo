@@ -535,8 +535,8 @@
       pageScrollTimer: null,
       snapParams: { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: true },
       displayCats: [],
-      // 结果列表渐进显示：默认 5 条（v1.16.138 起与每批搜索结果数一致）
-      visibleCount: 5,
+      // 结果列表渐进显示：默认 6 条（v1.16.141 起与每批搜索结果数一致）
+      visibleCount: 6,
       // v1.16.131：✕ 清除的时间戳（用于吞掉冒泡到搜索框的同一次点击）
       _clearedAt: 0,
       // v1.16.140：声波图标（5 根竖条，类名 JS 预拼 —— 模板禁复杂表达式）
@@ -581,9 +581,9 @@
       displayList: [],
       totalCount: 0,
       currentPage: 1,
-      // v1.16.138（主人定案）：总搜索每批 5 条 —— 该值即 searchAllAsync 的 target
+      // v1.16.141（主人定案）：总搜索每批 6 条 —— 该值即 searchAllAsync 的 target
       // （pageSize × page = 本轮要凑够的卡片数）；一个集凑不够会自动继续下一个集直到凑够
-      pageSize: 5,
+      pageSize: 6,
       loading: false,
       allLoaded: false,
       searched: false,
@@ -1638,9 +1638,9 @@
         })
         // 列表封顶（v1.16.25）：原先无限 concat，翻 10 页即 200 条 × 4 个节点 = 800 节点，
         // 手环上直接拖垮渲染；同时它也是下方高度公式线性膨胀的根源。只保留最近 MAX_ROWS 条。
-        // v1.16.138（主人定案）：一页最多停留 10 条 —— 多次点「更多」后前面多余的刷新掉，
+        // v1.16.141（主人定案）：一页最多停留 6 条 —— 多次点「更多」后前面多余的刷新掉，
         // 防列表无限扩张（原 MAX_ROWS=100 只是防爆上限，不解决"越点越长"）
-        var MAX_PAGE_ITEMS = 10
+        var MAX_PAGE_ITEMS = 6
         if (page === 1) {
           this.displayList = formatted
         } else {
@@ -1686,11 +1686,12 @@
 
     // 搜索态滚到底：自动加载下一页（键盘弹出时不触发；非搜索态双屏滚动不翻页）
     onPageScrollBottom() {
-      if (!this.searchActive) return
-      if (this.showKeyboard) return
-      if (this.loading || this.allLoaded) return
-      if (!this.displayList.length) return
-      this.loadPage(this.currentPage + 1)
+      // v1.16.141（主人定案）：「直到点击显示更多之后才开始继续搜索」—— **关闭触底自动翻页**。
+      // 原实现滚到底就自动 loadPage(currentPage+1)：主人滑动结果列表时会被动地把资料集
+      // 一个一个搜下去（每批都要读 block + 解析 map），这才是「感觉还是查过数量、没有停止过」
+      // 的真正来源 —— 前几轮我只调了搜索侧的条数与上限，没动这个触发侧。
+      // 现只保留「显示更多」按钮触发（showMore）。方法保留空实现，避免模板 onscrollbottom 绑空报错。
+      return
     },
 
     gotoDetail(id) {
