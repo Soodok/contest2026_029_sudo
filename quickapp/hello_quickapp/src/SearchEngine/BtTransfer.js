@@ -74,13 +74,14 @@ function handleMessage(data) {
     var _btAllowed = true
     try { if (typeof global !== 'undefined' && global.bluetoothReceive === false) _btAllowed = false } catch (e) {}
     if (!_btAllowed) { _log('蓝牙接收已关闭，忽略 ds-begin: ' + msg.ds); return }
-    receiving = { ds: String(msg.ds || ''), name: String(msg.name || msg.ds || ''), total: msg.total || 0, files: {} }
+    receiving = { ds: String(msg.ds || ''), name: String(msg.name || msg.ds || ''), total: msg.total || 0, files: {}, okCount: 0, failCount: 0 }
     // 进入专门传输界面（无退出入口，只能手机端停止或传完）
     transfer = { phase: 'receiving', ds: receiving.ds, dsId: '', name: receiving.name, total: receiving.total, done: 0, currentFile: '', error: '' }
     try { require('@system.router').replace({ uri: '/pages/btransfer' }) } catch (e) {}
     _log('开始接收资料集: ' + receiving.ds + '（' + receiving.total + ' 个文件）')
   } else if (msg.t === 'ds-chunk' && receiving && receiving.ds === String(msg.ds || '')) {
-    var fname = String(msg.f || '')
+    // v1.16.124 审查建议#7：文件名过滤，防止路径分隔符写出沙箱子目录
+    var fname = String(msg.f || '').replace(/[\\/]/g, '_')
     if (!fname) return
     var rec = receiving.files[fname] || (receiving.files[fname] = { chunks: {}, got: 0, last: false })
     var idx = msg.i || 0
@@ -92,13 +93,15 @@ function handleMessage(data) {
       // 流式：收齐即落盘（审查中#7），从内存释放
       var dsNow = receiving.ds
       finalizeFile(dsNow, fname, rec).then(function(ok) {
-        if (receiving && receiving.ds === dsNow) delete receiving.files[fname]
+        if (!receiving || receiving.ds !== dsNow) return
+        if (ok) { receiving.okCount = (receiving.okCount || 0) + 1; delete receiving.files[fname] }
+        else { receiving.failCount = (receiving.failCount || 0) + 1 }   // 保留记录：ds-end 补落 + 精确报错
       })
     }
   } else if (msg.t === 'ds-file' && receiving && receiving.ds === String(msg.ds || '')) {
     // 单帧整文件（小文件可不切片）。空文件名防护（审查修复）：空名会让后续
     // flushFile 对目录本身 writeText → 整批落盘失败
-    var fname2 = String(msg.f || '')
+    var fname2 = String(msg.f || '').replace(/[\\/]/g, '_')   // v1.16.124 同 ds-chunk 路径过滤
     if (!fname2) return
     var rec2 = receiving.files[fname2] || (receiving.files[fname2] = { chunks: {}, got: 0, last: false })
     if (!rec2.last) {
@@ -109,7 +112,9 @@ function handleMessage(data) {
       transfer.currentFile = fname2
       var dsNow2 = receiving.ds
       finalizeFile(dsNow2, fname2, rec2).then(function(ok) {
-        if (receiving && receiving.ds === dsNow2) delete receiving.files[fname2]
+        if (!receiving || receiving.ds !== dsNow2) return
+        if (ok) { receiving.okCount = (receiving.okCount || 0) + 1; delete receiving.files[fname2] }
+        else { receiving.failCount = (receiving.failCount || 0) + 1 }
       })
     }
   } else if (msg.t === 'ds-abort') {
@@ -125,21 +130,29 @@ function handleMessage(data) {
     var name = receiving.name
     var files = receiving.files
     var declared = receiving.total || 0
+    // ⚠️ 校验基准必须是「成功落盘数」而非 Object.keys(files).length（审查必修#1）：
+    // 流式落盘下先完成的文件已被 delete，用存活键计数会必然误报「文件数不符」→ 拒绝注册。
+    var okTotal = receiving.okCount || 0
     receiving = null
     var names = Object.keys(files)
-    // 未落盘的残留文件（finalizeFile 失败/未触发的）在此补落
+    // 未落盘的残留（finalizeFile 失败/未触发的）在此补落重试
     var chain = Promise.resolve()
+    var failed = []
     names.forEach(function(fn) {
       var rec0 = files[fn]
       if (rec0.chunks && rec0.got > 0) {
-        chain = chain.then(function() { return finalizeFile(ds, fn, rec0) })
-      }
+        chain = chain.then(function() {
+          return finalizeFile(ds, fn, rec0).then(function(ok) { if (ok) okTotal++ ; else failed.push(fn) })
+        })
+      } else { failed.push(fn) }
     })
     chain.then(function(okAll) {
-      if (declared > 0 && names.length !== declared) {
+      if (declared > 0 && okTotal !== declared) {
         transfer.phase = 'error'
-        transfer.error = '文件数不符(声明' + declared + '/实收' + names.length + ')'
-        _log('文件数不符: 声明' + declared + '/实收' + names.length, 'error')
+        transfer.error = failed.length
+          ? ('有 ' + failed.length + ' 个文件未落盘(声明' + declared + '/成功' + okTotal + ')：' + failed.slice(0,3).join(' '))
+          : ('文件数不符(声明' + declared + '/成功' + okTotal + ')')
+        _log('落盘校验失败: 声明' + declared + '/成功' + okTotal + ' 未落盘' + failed.length, 'error')
         return
       }
       _log('全部落盘完成: internal://files/datasets/' + ds + '/', 'success')
@@ -147,7 +160,7 @@ function handleMessage(data) {
       var dsObj = DatasetManager.registerDynamicDataset({ dirName: ds, name: name })
       transfer.phase = 'done'
       transfer.dsId = String(dsObj.id)
-      transfer.done = names.length
+      transfer.done = declared > 0 ? okTotal : (okTotal + names.length)
     }).catch(function(e) {
       transfer.phase = 'error'
       transfer.error = '保存失败：' + (e && e.message ? e.message : '未知')

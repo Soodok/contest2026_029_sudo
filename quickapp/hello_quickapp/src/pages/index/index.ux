@@ -208,7 +208,9 @@
      内容中心由 14 变 20（标题下移 6px），搜索框 margin-top 回 14 使位置仍为 44（下游与垂直预算不变） */
   /* v1.16.123：height 30→36 —— 原内容区仅 20px 装不下 26px 角标，靠负 margin 溢出且**余量 0px**
      （圆底 30 = 容器底 30），主人实机截图里角标左上被直角裁掉（本机舍入恰好没裁）。
-     现内容区 26px，角标 margin-top -10 → 圆 y5~31，底部留 5px 余量；search-box 上距 10→4 抵消增高 */
+     现内容区 26px，角标 24px + margin-top -12 → 实测圆 y6~32（容器底 36，余量 4px，距屏左/上 7/6px）；
+     search-box 上距 10→4 抵消增高 → 搜索框仍 y44-99。注：标准 CSS flex 推导与实测有偏差，
+     判断圆是否被裁以「逐行宽度分布」为准（完整圆 = 顶窄→中宽→底窄，被裁则首末行突然变宽） */
   .statusbar { position: relative; overflow: visible; width: 100%; height: 36px; padding-top: 10px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
   .sb-left { flex: 1; flex-direction: row; align-items: center; }
   /* v1.16.117：蓝牙角标（形态差异由媒体查询控制，见 pill/circle 块） */
@@ -1009,7 +1011,10 @@
       var self = this
       // v1.16.57 清理：删除「随机波形动画」演示代码（无真实音量数据源，凑数渲染）
       // 超时兜底（审查修复）：真链路手机不回包时，聆听态会无限卡死——12s 自动退出
-      setTimeout(function () {
+      // v1.16.124 审查建议#3：存句柄并在 exitVoiceSearch 清除 —— 原匿名定时器在「退出后
+      // 12s 内重进聆听」时，到期会把新一轮聆听误杀（dataset.ux 早已是正确写法）
+      if (this._voiceTimer) { clearTimeout(this._voiceTimer); this._voiceTimer = null }
+      this._voiceTimer = setTimeout(function () {
         if (self && !self.isDestroyed && self.voiceActive) {
           self.log('[HOME-SEARCH] 语音识别超时，自动退出聆听', 'warn')
           self.exitVoiceSearch()
@@ -1042,6 +1047,8 @@
     // 退出语音聆听态（同时取消在途的识别请求）
     exitVoiceSearch() {
       this.voiceActive = false
+      // v1.16.124 审查建议#3：清掉 12s 超时定时器，否则退出后重进会被旧定时器误杀
+      if (this._voiceTimer) { clearTimeout(this._voiceTimer); this._voiceTimer = null }
       getAssistant().cancel()
       this.log('[HOME-SEARCH] 语音搜索结束')
     },

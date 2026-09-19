@@ -79,8 +79,10 @@
     refreshBluetooth() {
       storage.get({
         key: 'bluetooth_receive',
-        success: (d) => { this.bluetoothText = d === 'true' ? '已开启' : '已关闭' },
-        fail: () => { this.bluetoothText = '已关闭' }
+        // v1.16.124 审查必修#2：默认值语义统一为「无存储值 = 开启」（原 d==='true' 会与
+        // app.ux/BtTransfer 的实际行为相反：全新安装实际在接收，UI 却显示已关闭）
+        success: (d) => { this.bluetoothText = d !== 'false' ? '已开启' : '已关闭' },
+        fail: () => { this.bluetoothText = '已开启' }
       })
     },
 

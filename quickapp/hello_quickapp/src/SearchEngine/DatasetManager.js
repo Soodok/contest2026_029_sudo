@@ -226,9 +226,11 @@ async function searchAllAsync(query, options) {
         // ⚠️ 手环9固件雷：模板里 class="a sz-{{$item.x}}" 拼接表达式会让 DOM 属性设置崩
         // （Unsupported type for setDomAttributes）——必须在此预拼完整类名，模板只做纯变量插值。
         // 未声明 display.card 的集（历史/诗词）不下发 sz 类，保持页面 CSS 形态基准，不改变现有观感
-        var sz0 = (card && rows[0]) ? rows[0].size : ''
-        var sz1 = (card && rows[1]) ? rows[1].size : ''
-        var sz2 = (card && rows[2]) ? rows[2].size : ''
+        // v1.16.124 审查建议#5：卡片尺寸类。补 rows 空值防护 —— card 声明存在但 rows 缺失时
+        // rows[0] 会抛 TypeError 中断该集搜索（当前 6 集均未声明 display.card，属潜伏雷）
+        var sz0 = (card && rows && rows[0]) ? rows[0].size : ''
+        var sz1 = (card && rows && rows[1]) ? rows[1].size : ''
+        var sz2 = (card && rows && rows[2]) ? rows[2].size : ''
         it.yearClass = 'result-year' + (sz0 ? ' sz-' + sz0 : '')
         it.titleClass = 'result-title' + (sz1 ? ' sz-' + sz1 : '')
         it.catClass = 'result-region' + (sz2 ? ' sz-' + sz2 : '')
@@ -345,13 +347,16 @@ function warmupSingle(dsId, onProgress) {
 // 首次总搜索直接命中内存不再冷读；loading 页可视构建仍默认释放（峰值内存约束不变）
 async function warmupAllCaches(onProgress, keepAlive) {
   var done = 0
+  var okCount = 0   // v1.16.124：成功集数（done 是尝试数，不可用于判断是否需要自愈重跑）
   for (var i = 0; i < DATASETS.length; i++) {
     var ds = DATASETS[i]
+    var okThis = false
     try {
       await Promise.race([
-        (async function() { await warmupOne(ds, null, keepAlive) })(),
+        (async function() { await warmupOne(ds, null, keepAlive); okThis = true })(),
         new Promise(function(r) { setTimeout(r, 20000) })
       ])
+      if (okThis) okCount++
     } catch (e) {
       console.log('[DM] 预热跳过 ds=' + ds.id + ': ' + (e && e.message ? e.message : '未知'))
     }
@@ -362,8 +367,11 @@ async function warmupAllCaches(onProgress, keepAlive) {
   }
   // v1.16.66 首次加载判断（主人定案）：预热完成写标记——下次启动 isCacheBuilt() 命中
   // 直接进主界面；中断/失败（标记没写）→ 下次启动自动重走 loading 重跑（幂等自愈）
+  // v1.16.124 审查建议#4：done 计的是「尝试数」，原代码无条件写标记 —— 6 集全部超时/失败时
+  // 也会标记「已建」，下次启动直接进主界面失去自愈机会、首搜全冷。改为至少一集成功才写。
   try {
-    require('@system.storage').set({ key: 'cache_built', value: String(CACHE_VERSION) })
+    if (okCount > 0) require('@system.storage').set({ key: 'cache_built', value: String(CACHE_VERSION) })
+    else console.log('[DM] 预热全部失败，不写 cache_built 标记（下次启动重跑 loading 自愈）')
   } catch (e) {}
   // 内存标记（v1.16.68 循环修复）：loading 建完即记——同会话内 index 判断走内存快路径，
   // 不依赖 storage 回调（该回调在部分环境会丢失，导致「超时→跳 loading→回来→再超时」死循环）

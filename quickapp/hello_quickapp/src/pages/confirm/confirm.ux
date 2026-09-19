@@ -60,8 +60,9 @@
     onInit() {
       storage.get({
         key: 'bluetooth_receive',
-        success: (d) => { this.enabled = d === 'true' },
-        fail: () => { this.enabled = false }
+        // v1.16.124 审查必修#2：同 settings.ux —— 无存储值即开启，避免首装 UI 与真实行为相反
+        success: (d) => { this.enabled = d !== 'false' },
+        fail: () => { this.enabled = true }
       })
     },
 

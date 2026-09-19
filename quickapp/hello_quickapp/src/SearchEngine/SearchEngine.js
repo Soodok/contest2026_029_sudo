@@ -1209,8 +1209,11 @@ async _checkAllMapsCache() {
     // （maxLoadedChunks=2），先加载的块会被后加载的挤掉 → 下面求交读 this.loadedChunks[id]
     // 得 undefined → candidateSet 被清空 = 假「无结果」。本次查询期间临时把上限抬到候选
     // 块数（通常 2~4 块，短暂驻留），查完立即还原 —— 不改变常驻内存策略。
+    // v1.16.124 审查建议#2：并发搜索会互相覆盖 —— A 存2抬到4、B 存4抬到6、A 还原2、B 还原4
+    // → 常驻上限被永久改成 4。加所有权标记：仅当抬升后的值仍属本次调用时才还原。
     var _savedMaxChunks = this.maxLoadedChunks
-    if (chunkIds.length > _savedMaxChunks) this.maxLoadedChunks = chunkIds.length
+    var _raisedTo = -1
+    if (chunkIds.length > _savedMaxChunks) { this.maxLoadedChunks = chunkIds.length; _raisedTo = chunkIds.length }
     for (var c = 0; c < chunkIds.length; c++) {
       var chunkData = await this._ensureChunk(chunkIds[c])
       if (!chunkData) {
@@ -1259,7 +1262,8 @@ async _checkAllMapsCache() {
     }
     
     _logInfo('最终候选数: ' + candidateSet.size, 'search')
-    this.maxLoadedChunks = _savedMaxChunks   // v1.16.120 还原 LRU 上限
+    // v1.16.124：仅当当前值仍等于本次抬升的值（期间无其他并发搜索改动过）才还原
+    if (_raisedTo > 0 && this.maxLoadedChunks === _raisedTo) this.maxLoadedChunks = _savedMaxChunks
     return Array.from(candidateSet)
   }
   
