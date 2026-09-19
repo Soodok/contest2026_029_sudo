@@ -209,10 +209,11 @@
   .statusbar { position: relative; width: 100%; height: 30px; padding-top: 10px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
   .sb-left { flex: 1; flex-direction: row; align-items: center; }
   /* v1.16.117：蓝牙角标（形态差异由媒体查询控制，见 pill/circle 块） */
-  .sb-bt-pill { width: 30px; height: 30px; border-radius: 15px; flex-direction: row; justify-content: center; align-items: center; flex-shrink: 0; margin-left: -30px; margin-top: -10px; }
+  /* v1.16.118：30→26px 内缩 4px（原完全贴边，观感像出屏）；未连接底色改暗红（主人指定，暂定） */
+  .sb-bt-pill { width: 26px; height: 26px; border-radius: 13px; flex-direction: row; justify-content: center; align-items: center; flex-shrink: 0; margin-left: -26px; margin-top: -6px; }
   .sb-bt-on { background-color: #4D9FEE; }
-  .sb-bt-off { background-color: #EA4335; }
-  .sb-bt { width: 19px; height: 19px; }
+  .sb-bt-off { background-color: #B71C1C; }
+  .sb-bt { width: 17px; height: 17px; }
   .sb-block { flex: 1; flex-direction: column; align-items: flex-end; }
   .time { font-size: 16px; color: #757575; font-weight: 400; }
   .app-title { font-size: 18px; color: #FFFFFF; font-weight: 500; margin-top: 3px; }
@@ -394,6 +395,7 @@
     /* ===== 胶囊 192x490（手环 9）：设置/收藏上下两行全宽卡片 ===== */
   @media (shape: pill-shaped) {
     .sb-bt-pill { display: none; }
+    .prompt-bt { display: none; }
     .statusbar { justify-content: center; padding-left: 0; padding-right: 0; }
     .sb-block { align-items: center; }
     .time { font-size: 21px; }
