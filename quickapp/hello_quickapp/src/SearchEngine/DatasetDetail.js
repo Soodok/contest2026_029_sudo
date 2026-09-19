@@ -3,7 +3,7 @@
 // ⚠️ 必须显式 import：各 JS 模块作用域独立，DATASETS/decodeGlobalId/ensureEngine 不会凭空可见
 import { DATASETS, ensureEngine, decodeGlobalId } from './DatasetManager.js'
 
-var FIELD_NAME_MAP = { source: '出处', content: '正文', keywords: '关键词', author: '作者',
+var FIELD_NAME_MAP = { source: '出处', content: '正文', translation: '译文', keywords: '关键词', author: '作者',
   // 历史集（v1.16.61 统一引擎路径后，历史集字段经此映射显示中文名）
   cause: '原因/背景', impact: '影响/做法' }
 

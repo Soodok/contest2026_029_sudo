@@ -18,6 +18,21 @@
 //   5. localId 从 0 连续递增，map/detail 行首 ID 与行序绑定
 'use strict'
 
+var path = require('path')
+
+// 路径护栏（CLI 工具的 IO sink 共用）：以 base 为界，拒绝 ../ 越出
+function rooted(base, name) {
+  var b = path.resolve(base)
+  var t = path.resolve(b, name)
+  if (t !== b && !t.startsWith(b + path.sep)) throw new Error('路径越界（拒绝访问 base 之外）: ' + t)
+  return t
+}
+// 拒绝路径串中的 ./.. 段（纯字符串护栏，用于回调式 readFile 前的校验）
+function assertNoDotSegs(p) {
+  var segs = String(p).split(/[\\/]+/)
+  if (segs.indexOf('..') >= 0 || segs.indexOf('.') >= 0) throw new Error('路径不允许包含 . 或 .. 段: ' + p)
+}
+
 // ── 哈希与分词（与引擎 _parseQuery 逐字对齐） ─────────────────────
 
 function hashCode(str) {
@@ -99,7 +114,9 @@ function parseSources(spec, files, readFile) {
 
   for (var fi = 0; fi < files.length; fi++) {
     var fileLabel = files[fi].label || files[fi].path
-    var raw = readFile(files[fi].path)
+    var srcPath = files[fi].path
+    assertNoDotSegs(srcPath)
+    var raw = readFile(srcPath)
     if (type === 'tsv') {
       // rebuild_english_cet 语义：行不 trim，split(\t)，p.length<2 或空词丢弃
       var lines = raw.split('\n')
@@ -166,8 +183,8 @@ function parseSources(spec, files, readFile) {
 function readExisting(dir, readFile, existsFn) {
   function readChunks(prefix) {
     var out = []
-    for (var i = 0; existsFn(dir + '/' + prefix + '_' + i + '.txt'); i++) {
-      out.push.apply(out, readFile(dir + '/' + prefix + '_' + i + '.txt').split('\n').filter(function(l) { return l.trim() }))
+    for (var i = 0; existsFn(rooted(dir, prefix + '_' + i + '.txt')); i++) {
+      out.push.apply(out, readFile(rooted(dir, prefix + '_' + i + '.txt')).split('\n').filter(function(l) { return l.trim() }))
     }
     return out
   }
@@ -372,17 +389,17 @@ function buildArtifacts(spec, records, regionValues, existingMeta) {
 // ── 写盘（清理旧分片 → 写新，防残留分片带旧 id 被引擎读到） ────────
 
 function writeDataset(dir, artifacts, io) {
-  io.mkdir(dir)
-  var olds = io.listFiles(dir)
+  io.mkdir(rooted(dir, '.'))
+  var olds = io.listFiles(rooted(dir, '.'))
   for (var i = 0; i < olds.length; i++) {
-    if (/^(map|detail)_\d+\.txt$/.test(olds[i])) io.unlink(dir + '/' + olds[i])
+    if (/^(map|detail)_\d+\.txt$/.test(olds[i])) io.unlink(rooted(dir, olds[i]))
   }
-  artifacts.mapBodies.forEach(function(body, i) { io.write(dir + '/map_' + i + '.txt', body) })
-  artifacts.detailBodies.forEach(function(body, i) { io.write(dir + '/detail_' + i + '.txt', body) })
-  io.write(dir + '/block_0.txt', artifacts.blockBody)
-  if (artifacts.yearIndexBody) io.write(dir + '/year_index.txt', artifacts.yearIndexBody)
-  io.write(dir + '/meta.txt', artifacts.metaTxt)
-  if (artifacts.metaJsonTxt) io.write(dir + '/meta.json', artifacts.metaJsonTxt)
+  artifacts.mapBodies.forEach(function(body, i) { io.write(rooted(dir, 'map_' + i + '.txt'), body) })
+  artifacts.detailBodies.forEach(function(body, i) { io.write(rooted(dir, 'detail_' + i + '.txt'), body) })
+  io.write(rooted(dir, 'block_0.txt'), artifacts.blockBody)
+  if (artifacts.yearIndexBody) io.write(rooted(dir, 'year_index.txt'), artifacts.yearIndexBody)
+  io.write(rooted(dir, 'meta.txt'), artifacts.metaTxt)
+  if (artifacts.metaJsonTxt) io.write(rooted(dir, 'meta.json'), artifacts.metaJsonTxt)
 }
 
 module.exports = {

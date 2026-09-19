@@ -20,7 +20,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const core = require(path.join(__dirname, 'lib', 'dataset_core.js'))
+const core = require('./lib/dataset_core.js')
 
 const ROOT = path.join(__dirname, '..')
 const DATA_RE = /^(map|detail)_\d+\.txt$/
@@ -42,22 +42,25 @@ function cmdDiff(a, b, includeIcons) {
   console.log('═'.repeat(60))
   console.log('字节级比对: A=' + a + '\n            B=' + b)
   for (const name of names) {
-    const pa = path.join(a, name), pb = path.join(b, name)
-    const ea = fs.existsSync(pa), eb = fs.existsSync(pb)
-    if (!ea || !eb) {
-      console.log('  ❌ ' + name + ' — 仅' + (ea ? 'A' : 'B') + '存在')
-      bad++
-      continue
-    }
-    const ba = fs.readFileSync(pa), bb = fs.readFileSync(pb)
-    if (ba.equals(bb)) {
-      if (process.argv.includes('--quiet')) continue
-      console.log('  ✅ ' + name + ' (' + ba.length + 'B)')
-      ok++
-    } else {
-      console.log('  ❌ ' + name + ' — 内容不同 (A=' + ba.length + 'B, B=' + bb.length + 'B)')
-      bad++
-    }
+    const pa = path.resolve(a, name)
+    const pb = path.resolve(b, name)
+    if ((pa === a || pa.startsWith(a + path.sep)) && (pb === b || pb.startsWith(b + path.sep))) {
+      const ea = fs.existsSync(pa), eb = fs.existsSync(pb)
+      if (!ea || !eb) {
+        console.log('  ❌ ' + name + ' — 仅' + (ea ? 'A' : 'B') + '存在')
+        bad++
+        continue
+      }
+      const ba = fs.readFileSync(pa), bb = fs.readFileSync(pb)
+      if (ba.equals(bb)) {
+        if (process.argv.indexOf('--quiet') >= 0) continue
+        console.log('  ✅ ' + name + ' (' + ba.length + 'B)')
+        ok++
+      } else {
+        console.log('  ❌ ' + name + ' — 内容不同 (A=' + ba.length + 'B, B=' + bb.length + 'B)')
+        bad++
+      }
+    } else { bad++ }
   }
   console.log('─'.repeat(60))
   console.log((bad === 0 ? '✅ 完全一致' : '❌ ' + bad + ' 个文件不一致') + '（' + ok + ' 个文件相同）')
@@ -235,13 +238,19 @@ function cmdCheck(dir, specName) {
 // ── 入口 ─────────────────────────────────────────────────────────
 const cmd = process.argv[2]
 if (cmd === 'diff') {
-  const a = path.resolve(process.argv[3]), b = path.resolve(process.argv[4])
+  const rawA = process.argv[3], rawB = process.argv[4]
+  const a = rawA ? path.resolve(ROOT, rawA) : null
+  const b = rawB ? path.resolve(ROOT, rawB) : null
   if (!a || !b || !fs.existsSync(a) || !fs.existsSync(b)) { console.error('用法: node tools/verify_dataset.js diff <目录A> <目录B> [--icons]'); process.exit(1) }
-  cmdDiff(a, b, process.argv.includes('--icons'))
+  if (a !== ROOT && !a.startsWith(ROOT + path.sep)) { console.error('❌ 路径必须在工程目录内: ' + a); process.exit(1) }
+  if (b !== ROOT && !b.startsWith(ROOT + path.sep)) { console.error('❌ 路径必须在工程目录内: ' + b); process.exit(1) }
+  cmdDiff(a, b, process.argv.indexOf('--icons') >= 0)
 } else if (cmd === 'check') {
-  const dir = path.resolve(process.argv[3])
-  const specName = process.argv[4] && !process.argv[4].startsWith('--') ? process.argv[4] : null
+  const rawDir = process.argv[3]
+  const dir = rawDir ? path.resolve(ROOT, rawDir) : null
   if (!dir || !fs.existsSync(dir)) { console.error('用法: node tools/verify_dataset.js check <目录> [spec]'); process.exit(1) }
+  if (dir !== ROOT && !dir.startsWith(ROOT + path.sep)) { console.error('❌ 路径必须在工程目录内: ' + dir); process.exit(1) }
+  const specName = process.argv[4] && process.argv[4].indexOf('--') !== 0 ? process.argv[4] : null
   cmdCheck(dir, specName)
 } else {
   console.error('用法:\n  node tools/verify_dataset.js diff <目录A> <目录B> [--icons]\n  node tools/verify_dataset.js check <目录> [spec]')

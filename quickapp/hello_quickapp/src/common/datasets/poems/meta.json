@@ -4,7 +4,7 @@
   "version": 1,
   "category": "文化",
   "author": "sudo",
-  "totalCount": 550,
+  "totalCount": 800,
   "fields": {
     "map": [
       "title",
@@ -14,7 +14,8 @@
     "keyword": "keywords",
     "detail": [
       "source",
-      "content"
+      "content",
+      "translation"
     ],
     "filter": [
       "dynasty"

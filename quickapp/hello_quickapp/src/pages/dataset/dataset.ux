@@ -229,7 +229,7 @@
     .sb-block { align-items: center; }
     .time { font-size: 21px; }
     .app-title { font-size: 22px; }
-    .search-box { width: 246px; height: 92px; border-radius: 46px; margin-top: 20px; border: 3px solid #3A3A3C; padding-left: 30px; }
+    .search-box { width: 246px; height: 88px; border-radius: 44px; margin-top: 14px; border: 3px solid #3A3A3C; padding-left: 30px; }
     .search-box-icon { width: 40px; height: 40px; }
     .search-placeholder { font-size: 30px; margin-left: 16px; }
     .search-input { font-size: 34px; margin-left: 16px; }
@@ -237,20 +237,21 @@
     .voice-text { font-size: 36px; margin-left: 16px; }
     .searchbox-voice { height: 130px; }
     /* 胶囊屏维持居中布局：卡片回纵向、左列回横向（与 v1.16.80 观感一致） */
-    .ds-card { flex-direction: column; align-items: center; width: 246px; border-radius: 30px; padding: 28px 22px 24px; margin-top: 14px; }
+    /* v1.16.173（主人实测：语音搜索按钮仍卡出屏）压缩垂直预算 ~44 单位 */
+    .ds-card { flex-direction: column; align-items: center; width: 246px; border-radius: 30px; padding: 22px 22px 18px; margin-top: 8px; }
     .ds-card-left { flex-direction: row; align-items: center; margin-right: 0; }
     .ds-card-right { width: 100%; align-items: center; margin-top: 0; }
     .ds-icon-box { width: 70px; height: 70px; border-radius: 35px; }
     .ds-icon { width: 42px; height: 42px; }
     .ds-name { font-size: 36px; margin-top: 0; margin-left: 10px; }
     .ds-desc { width: 92%; font-size: 24px; line-height: 34px; text-align: center; }
-    .ds-tags-scroll { height: 80px; margin-top: 18px; }
+    .ds-tags-scroll { height: 76px; margin-top: 12px; }
     .ds-tag { height: 64px; border-radius: 32px; padding: 0 26px; margin-right: 12px; }
     .ds-tag-text { font-size: 28px; }
-    .voice-btn { width: 246px; height: 92px; border-radius: 46px; margin-top: 0; }
+    .voice-btn { width: 246px; height: 84px; border-radius: 42px; margin-top: 0; }
     .voice-btn-icon { width: 40px; height: 40px; margin-right: 12px; }
     .voice-btn-text { font-size: 34px; }
-    .ds-hint { font-size: 22px; margin-top: 20px; margin-bottom: 14px; }
+    .ds-hint { font-size: 22px; margin-top: 14px; margin-bottom: 10px; }
     .result-item { border-radius: 20px; padding: 14px 18px; margin-bottom: 10px; }
     .result-year { font-size: 26px; }
     .result-title { font-size: 30px; }
@@ -426,7 +427,11 @@
         this.showKeyboard = false
         this.finishInput()
       } else {
-        this.searchActive = true
+        // v1.16.156（主人实测卡死修复）：这里原本还有 `this.searchActive = true` ——
+        // 它会把 ds-block（含横向滚动的标签行）整棵销毁换成 ds-result，紧接着 60ms 后
+        // 又创建 800 行的键盘组件。两个大 DOM 变更挨在一起时运行时会卡死
+        // （实测：滑动标签行 → 点标签 → 点搜索框 → 画面永久静止 38s 不动）。
+        // 现在开键盘只开键盘；切结果区推迟到收键盘时（finishInput → resetAndSearch）。
         this.openKeyboard()
       }
     },
@@ -483,6 +488,8 @@
     },
 
     resetAndSearch() {
+      // v1.16.156：切结果区收敛到这里统一执行（开键盘时不再切，见 toggleSearchBox 注释）
+      this.searchActive = true
       this.currentPage = 1
       this.allLoaded = false
       this.searched = true
@@ -631,7 +638,8 @@
     // 左右滑：搜索/语音态先退出，然后在资料信息态返回上一页
     onSwipe(eve) {
       if (this.voiceActive) { this.exitVoiceSearch(); return }
-      if (this.searchActive) {
+      // v1.16.156：键盘开着也算搜索态（开键盘时 searchActive 仍为 false，见 toggleSearchBox）
+      if (this.searchActive || this.showKeyboard) {
         if (this.showKeyboard) { this.showKeyboard = false; this.finishInput(); return }
         this.searchActive = false
         this.clearSearch()

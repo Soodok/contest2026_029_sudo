@@ -26,13 +26,13 @@
             <img src="./assets/full/123_boardless.png" />
           </div>
           <!-- 这里使用show会导致每次输入都会加载全部候选列表，很卡 -->
-          <list class="list3" if="{{downFlag==='down'}}">
-            <list-item type="waitingRows62t9" class="item3" for="{{itemArray in resultList2}}">
-              <div class="item column center" style="height:52px;" for="{{item in itemArray}}">
-                <input class="calbtn0" type="button" value="{{item}}" @click="onRsSelect(item)" />
+          <scroll class="list3" scroll-y="{{true}}" if="{{downFlag==='down'}}">
+              <div class="list3-grid">
+                <div class="item3 column center" for="{{item in resultList}}" @click="onRsSelect(item)">
+                  <input class="calbtn0" type="button" value="{{item}}" @click="onRsSelect(item)" />
+                </div>
               </div>
-            </list-item>
-          </list>
+            </scroll>
           <div style="position: absolute;top:95px;left:8px;width:464px;height:52px;" show="{{downFlag===''&&!numFlag}}">
             <img src="./assets/full/Q.png" style="width:54px;height:52px;margin-right: 4px;" @click="onSelect('Q')" />
             <text class="calbtnfull" for="{{item in keys['full62'][0]}}" @click="onSelect(item)">{{item}}</text>
@@ -94,13 +94,13 @@
             <img src="./assets/full/123_boardless.png" />
           </div>
           <!-- 这里使用show会导致每次输入都会加载全部候选列表，很卡 -->
-          <list class="list3" if="{{downFlag==='down'}}">
-            <list-item type="waitingRows62full" class="item3" for="{{itemArray in resultList2}}">
-              <div class="item column center" style="height:52px;" for="{{item in itemArray}}">
-                <input class="calbtn0" type="button" value="{{item}}" @click="onRsSelect(item)" />
+          <scroll class="list3" scroll-y="{{true}}" if="{{downFlag==='down'}}">
+              <div class="list3-grid">
+                <div class="item3 column center" for="{{item in resultList}}" @click="onRsSelect(item)">
+                  <input class="calbtn0" type="button" value="{{item}}" @click="onRsSelect(item)" />
+                </div>
               </div>
-            </list-item>
-          </list>
+            </scroll>
           <div style="position: absolute;top:99px;left:95px;width:294px;height:60px;" show="{{downFlag===''&&!numFlag}}">
             <text class="calbtnt9" @click="onSelect('select')">选择</text>
             <text class="calbtnt9" for="{{item in keys['t9'][0]}}" @click="onSelect(item)">{{item.toUpperCase()}}</text>
@@ -162,32 +162,32 @@
           <progress percent="{{percent67}}" style="position:absolute;bottom: 12px;width:80px;color:#ffffff;stroke-width:6px;layer-color:#262626;"></progress>
           <scroll id="keyboard67" scroll-x="{{true}}" onscroll="handelScroll">
             <div if="{{!numFlag}}" style="left: 6px; flex-direction: column;">
-              <div static style="margin-left: 0px;margin-top: 0px;height: 60px;">
+              <div static style="margin-left: 0px;margin-top: 0px;height: 58px;">
                 <text class="calbtn67" for="{{item in keys['full'][0]}}" @click="onSelect(item)">{{item}}</text>
               </div>
-              <div static style="margin-left: 32px;margin-top: -5px;height: 60px;">
+              <div static style="margin-left: 32px;margin-top: 0px;height: 58px;">
                 <text class="calbtn67" for="{{item in keys['full'][1]}}" @click="onSelect(item)">{{item}}</text>
               </div>
-              <div static style="margin-left: 64px;margin-top: -5px;height: 60px;">
+              <div static style="margin-left: 64px;margin-top: 0px;height: 58px;">
                 <text class="calbtn67" for="{{item in keys['full'][2]}}" @click="onSelect(item)">{{item}}</text>
                 <img static src="./assets/horizontal/space.png" style="width: 60px;height: 60px;" @click="onBtnClick('space')" />
               </div>
             </div>
             <div else style="left: 6px; flex-direction: column;">
-              <div static style="margin-left: 0px;margin-top: 0px;height: 60px;">
+              <div static style="margin-left: 0px;margin-top: 0px;height: 58px;">
                 <text class="calbtn67" for="{{item in keys['sign'][0]}}" @click="onSelect(item)">{{item}}</text>
               </div>
-              <div static style="margin-left: 32px;margin-top: -5px;height: 60px;">
+              <div static style="margin-left: 32px;margin-top: 0px;height: 58px;">
                 <text class="calbtn67" for="{{item in keys['sign'][1]}}" @click="onSelect(item)">{{item}}</text>
               </div>
-              <div static style="margin-left: 64px;margin-top: -5px;height: 60px;">
+              <div static style="margin-left: 64px;margin-top: 0px;height: 58px;">
                 <text class="calbtn67" for="{{item in keys['sign'][2]}}" @click="onSelect(item)">{{item}}</text>
               </div>
             </div>
           </scroll>
         </div>
         <div style="width: 100%; flex-direction: row; justify-content: center; top:6px; padding:0 6px;">
-          <img src="./assets/horizontal/cn.png" style="padding: 6px;width: 60px;height: 60px;" @click="onBtnClick('lang')" if="{{downFlag==='' && !numFlag && lang==='cn'}}" />
+          <img src="./assets/horizontal/cn.png" style="padding: 4px;width: 52px;height: 52px;" @click="onBtnClick('lang')" if="{{downFlag==='' && !numFlag && lang==='cn'}}" />
           <div if="{{lang === 'cn' && !numFlag}}" style="margin-left: 6px;flex: 1;height: 60px;background-color:#262626;border-color: #333333; border-width: 3px; border-radius: 100px;flex-direction: row;align-items:center">
             <scroll id="cvalWaiting" scroll-x="{{true}}" style="position:absolute;width: 85%;height: 42px;">
               <div static style="position: absolute;left: 0px;height: 42px;padding-left:20px;padding-right:20px">
@@ -198,21 +198,26 @@
             <img if="{{resultList.length > 0}}" style="position:absolute;right: 8px; width: 60px;height: 40px;" src="./assets/horizontal/down2.png" @click="onBtnClick('down')" />
           </div>
         
-          <img src="./assets/horizontal/en.png" style="padding: 6px;width: 60px;height: 60px;" @click="onBtnClick('lang')" if="{{downFlag==='' && !numFlag && lang==='en'}}" />
-          <img src="./assets/horizontal/bigA.png" style="padding: 6px;margin-left: 6px;width:94px;height:60px;" @click="onBtnClick('switchLow')" if="{{downFlag==='' && upperFlag && lang==='en'&& !numFlag}}" />
-          <img src="./assets/horizontal/a.png" style="padding: 6px;margin-left: 6px;width:94px;height:60px;" @click="onBtnClick('switchUpper')" if="{{downFlag==='' && !upperFlag && lang==='en'&& !numFlag}}" />
-          <img src="./assets/horizontal/123.png" style="margin-left: 6px;padding: 6px;margin-left: 6px;width: 94px;height: 60px;" @click="onBtnClick('switchNum')" if="{{downFlag==='' && !numFlag && lang==='en'}}" />
-          <img src="./assets/horizontal/back2.png" style="margin-left: 6px;padding: 6px;width: 159px;height: 60px;" @click="onBtnClick('switchCn')" if="{{numFlag}}" />
-          <img if="{{!numFlag}}" src="./assets/horizontal/del.png" style="margin-left: 6px;padding: 6px;width: 60px;height: 60px;" @click="onBtnClick('D')" />
-          <img else src="./assets/horizontal/del2.png" style="margin-left: 6px;padding: 6px;" @click="onBtnClick('D')" />
+          <img src="./assets/horizontal/en.png" style="padding: 4px;width: 52px;height: 52px;" @click="onBtnClick('lang')" if="{{downFlag==='' && !numFlag && lang==='en'}}" />
+          <img src="./assets/horizontal/bigA.png" style="padding: 4px;margin-left: 4px;width: 82px;height: 52px;" @click="onBtnClick('switchLow')" if="{{downFlag==='' && upperFlag && lang==='en'&& !numFlag}}" />
+          <img src="./assets/horizontal/a.png" style="padding: 4px;margin-left: 4px;width: 82px;height: 52px;" @click="onBtnClick('switchUpper')" if="{{downFlag==='' && !upperFlag && lang==='en'&& !numFlag}}" />
+          <img src="./assets/horizontal/123.png" style="margin-left: 4px;padding: 4px;width: 82px;height: 52px;" @click="onBtnClick('switchNum')" if="{{downFlag==='' && !numFlag && lang==='en'}}" />
+          <img src="./assets/horizontal/back2.png" style="margin-left: 4px;padding: 4px;width: 138px;height: 52px;" @click="onBtnClick('switchCn')" if="{{numFlag}}" />
+          <img if="{{!numFlag}}" src="./assets/horizontal/del.png" style="margin-left: 4px;padding: 4px;width: 52px;height: 52px;" @click="onBtnClick('D')" />
+          <img else src="./assets/horizontal/del2.png" style="margin-left: 4px;padding: 4px;width: 138px;height: 52px;" @click="onBtnClick('D')" />
         </div>
         <!-- 这里使用show会导致每次输入都会加载全部候选列表，很卡 -->
         <div style="position: absolute;left: 0px;top: 0px;width: 100%;height: 252px;background-color: black; justify-content:center; flex-direction:column; align-items:center" if="{{downFlag==='down'}}">
           <div static class="list67">
+            <!-- v1.16.162：还原官方原始结构（<list>/<list-item>）。
+                 显示问题的真正修法在 CSS —— 官方 .item 没有宽度，里面 <input> 按 32px 字号
+                 取固有宽（约 150px），一行 6 个塞不进 304px 面板 → 右侧被裁，只剩 2 个可见。
+                 CSS 给 .item 显式 16% 宽 + 输入框加 cand-text 类限制为单元格满宽即可，
+                 模板结构不需要动。 -->
             <list static style="width:100%;height:100%;">
               <list-item type="waitingRows67" class="item67" for="{{itemArray in resultList2}}">
-                <div class="item column center" for="{{item in itemArray}}">
-                  <input class="calbtn02" type="button" value="{{item}}" @click="onRsSelect(item)" />
+                <div class="item cand-cell column center" for="{{item in itemArray}}">
+                  <input class="calbtn02 cand-text" type="button" value="{{item}}" @click="onRsSelect(item)" />
                 </div>
               </list-item>
             </list>
@@ -272,8 +277,8 @@
           <div style="position: absolute;left: 0px;width: 300px;height: 411px;">
             <list static class="list66">
               <list-item type="waitingRows66" class="item66" for="{{itemArray in resultList2}}">
-                <div class="item column center" for="{{item in itemArray}}">
-                  <input class="calbtn0" type="button" value="{{item}}" @click="onRsSelect(item)" />
+                <div class="item cand-cell column center" for="{{item in itemArray}}">
+                  <input class="calbtn0 cand-text" type="button" value="{{item}}" @click="onRsSelect(item)" />
                 </div>
               </list-item>
             </list>
@@ -527,16 +532,20 @@ export default {
     this.getResultByWord(this.cval + watingStr);
   },
   setResultListAll() {
+    // v1.16.152（主人要求「一行起码放五六个」）：分行改为固定 6 列。
+    // 原实现用 parseInt(this.maxlength) 当列数，而组件内该值实际为 2 → 一行只显示 2 个候选；
+    // 现在与输入长度限制解耦（maxlength 仍只用于输入上限）。列宽由 .item3 的 16% 配合。
+    const CAND_COLS = 6;
     this.resultList2 = [];
     let array = [];
     for (let i = 0; i < this.resultList.length; i++) {
       array.push(this.resultList[i]);
-      if (array.length === parseInt(this.maxlength)) {
+      if (array.length === CAND_COLS) {
         this.resultList2.push(array);
         array = [];
       }
     }
-    if (array.length > 0 && array.length < parseInt(this.maxlength)) {
+    if (array.length > 0) {
       this.resultList2.push(array);
     }
   },
@@ -634,9 +643,31 @@ export default {
 	left:0;
 	bottom:0
 }
+/* ⚠️ v1.16.164 修正（主人实测：切英语/中文后键盘显示异常）：
+   .item 是共享类 —— 圆形屏候选字栏（第 21/89 行 `<div class="item column center" for="{{cvalList}}">`）
+   也在用它。上一版直接给 .item 加 width:16%，把那条候选栏压乱了。
+   现在 .item 完全恢复官方原样，列宽只加在面板专用的 .cand-cell 上。 */
 .item {
 	height:52px;
 	flex-shrink:0
+}
+/* 候选面板单元格：只挂在候选「更多」面板的格子 div 上（与 .item 同时存在） */
+.cand-cell {
+	width:16%;
+	justify-content:center;
+	align-items:center
+}
+/* 候选字是单字（dicUtil 的 py2hz 按 split('') 拆成单字），
+   16% × 304px ≈ 48px 的单元格放 30px 单字正好居中，不再挤压。
+   排在 .calbtn02/.calbtn0 之后，同优先级后者生效（输入框满宽填充单元格）。 */
+.cand-text {
+	width:100%;
+	height:44px;
+	font-size:30px;
+	line-height:44px;
+	color:#FFFFFF;
+	background-color:rgba(38,38,38,0);
+	text-align:center
 }
 .calbtn0 {
 	color:#fff;
@@ -691,32 +722,43 @@ export default {
 	font-weight:bold;
 	padding-left:8px
 }
-/* v1.16.149（主人实测「更多」页候选字被极度挤压）：
-   原 left:78px + width:324px → 右边界 402px，超出方屏 336 / 胶囊 300（该值抄自更宽的画布）。
-   改用百分比：对任意 designWidth 与屏宽都自适应（5% ~ 95% 区间）。 */
+/* 圆屏候选面板（v1.16.149~153 逐轮收敛，v1.16.154 定案）：
+   ① 原 left:78px + width:324px → 右边界 402px 超出 480 画布 → 改百分比自适应；
+   ② 原 .item 用 flex:1（本运行时不支持）导致候选字被压扁 → 移除；
+   ③ <list>/<list-item> 布局不由 class 控制 → 本形态换 <scroll> + 普通 div 网格；
+   ④ 每行 6 列由 .item3 的 16% 宽保证（与 rect/pill 的 .item 同思路）。 */
 .list3 {
 	position:absolute;
 	top:38px;
 	left:5%;
 	width:90%;
-	height:260px;   /* v1.16.150：160→260（原值配合 flex:1 压扁显示，移除 flex 后需加大才够多行） */
-	flex-direction:column;
+	height:260px;
 	background-color:#262626;
 	border-radius:12px
 }
-.item3 {
+/* 网格容器：显式横向 + 换行（铁律 #2：容器必须显式声明 flex-direction） */
+.list3-grid {
 	width:100%;
-	height:52px
+	flex-direction:row;
+	flex-wrap:wrap;
+	padding: 4px 0
+}
+.item3 {
+	width:16%;
+	height:52px;
+	justify-content:center;
+	align-items:center;
+	flex-shrink:0
 }
 .calbtn67 {
 	color:rgb(255,255,255);
-	font-size:32px;
+	font-size:30px;
 	font-weight:bold;
 	background-color:rgb(38,38,38);
-	margin-right:4px;
-	width:60px;
-	height:60px;
-	border-radius:30px;
+	margin-right:8px;
+	width:52px;
+	height:52px;
+	border-radius:26px;
 	text-align:center;
 	border:3px solid rgba(255,255,255,0.06);
 }
@@ -725,7 +767,7 @@ export default {
 	left:0px;
 	top:82px;
 	width:100%;
-	height:170px;
+	height:182px;
 }
 #keyboard66 {
 	position:absolute;
@@ -807,6 +849,13 @@ export default {
   }
   .item {
     height: 66px;
+  }
+  /* v1.16.162：胶囊屏候选面板同步 6 列（.list66 内容宽 259px → 单元格约 41px）。
+     .item 的 16% 宽来自上面的基础规则，这里只需放大高度/字号。 */
+  .cand-text {
+    height: 56px;
+    line-height: 56px;
+    font-size: 40px;
   }
 }
 

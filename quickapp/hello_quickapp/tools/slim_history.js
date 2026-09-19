@@ -36,9 +36,11 @@ function tokenize(text) {
 }
 
 function readChunks(prefix) {
+  const base = path.resolve(DIR);
   const out = [];
   for (let i = 0; ; i++) {
-    const fp = path.join(DIR, prefix + '_' + i + '.txt');
+    const fp = path.resolve(base, prefix + '_' + i + '.txt');
+    if (fp !== base && !fp.startsWith(base + path.sep)) break;
     if (!fs.existsSync(fp)) break;
     out.push(...fs.readFileSync(fp, 'utf-8').split('\n').filter(l => l.trim()));
   }

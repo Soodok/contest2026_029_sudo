@@ -1,7 +1,8 @@
 <template>
   <!-- AI 回答页（v1.16.90 两页式 AI 界面之二）：读 global.aiResult 展示回答与来源；
-       v1.16.91 起提问页并入主界面 AI 面板，本页由主界面 push 进入——
-       「重新提问」与右滑均 router.back() 回主界面（AI 面板仍在输入态、问题保留可改再问） -->
+       v1.16.91 起提问页并入主界面 AI 面板，本页由主界面 push 进入。
+       v1.16.155 出口拆分：「重新提问」= 返回并立刻重开麦克风；「直接返回」= 返回并关面板回主界面。
+       两者与右滑都经 global.aiReturnAction 桥接，由主界面 onShow 执行 -->
   <div class="page-container">
     <div class="page" @swipe="onSwipe">
       <scroll class="answer-scroll" scroll-y="true">
@@ -51,9 +52,18 @@
           </div>
         </div>
 
-        <!-- 重新提问：replace 回提问页 -->
-        <div class="retry-btn" @click="goAsk">
-          <text class="retry-text">重新提问</text>
+        <!-- 底部双按钮（v1.16.155 主人定案）：
+             左「重新提问」→ 返回主界面后立刻重开麦克风，直接接着问，不用再点一次麦克风；
+             右「直接返回」→ 返回并关掉 AI 面板，真正回到主界面。
+             两个动作经 global.aiReturnAction 桥接给主界面 onShow 执行（页面模块实例按页面作用域隔离，
+             不能直接调主界面的方法） -->
+        <div class="btn-row">
+          <div class="retry-btn" @click="goAskAgain">
+            <text class="retry-text">重新提问</text>
+          </div>
+          <div class="home-btn" @click="goHome">
+            <text class="home-text">直接返回</text>
+          </div>
         </div>
 
         <div class="bottom-spacer"></div>
@@ -108,9 +118,13 @@
   .state-text { font-size: 17px; color: #757575; text-align: center; }
   .state-text-error { font-size: 18px; font-weight: bold; color: #EA4335; text-align: center; }
 
-  /* 重新提问胶囊：深灰次要色（对齐 detail.ux back-bar） */
-  .retry-btn { width: 100%; height: 44px; border-radius: 14px; background-color: #2C2C2E; justify-content: center; align-items: center; margin-top: 8px; flex-shrink: 0; }
-  .retry-text { font-size: 18px; font-weight: bold; color: #FFFFFF; }
+  /* 底部双按钮（v1.16.155）：横向排一行，各占 48%（本运行时 flex:1 不可靠，用显式宽度）。
+     重新提问 = 主操作蓝色描边式强调；直接返回 = 深灰次要色 */
+  .btn-row { width: 100%; flex-direction: row; justify-content: space-between; margin-top: 8px; flex-shrink: 0; }
+  .retry-btn { width: 48%; height: 44px; border-radius: 14px; background-color: #2C2C2E; justify-content: center; align-items: center; flex-shrink: 0; }
+  .retry-text { font-size: 18px; font-weight: bold; color: #4D9FEE; }
+  .home-btn { width: 48%; height: 44px; border-radius: 14px; background-color: #2C2C2E; justify-content: center; align-items: center; flex-shrink: 0; }
+  .home-text { font-size: 18px; font-weight: bold; color: #FFFFFF; }
 
   /* ===== 胶囊 192x490：按比例放大（对齐 detail.ux 胶囊屏） ===== */
   @media (shape: pill-shaped) {
@@ -136,8 +150,11 @@
     .state-card { width: 90%; border-radius: 32px; padding: 24px 28px; margin-bottom: 14px; }
     .state-text { font-size: 30px; }
     .state-text-error { font-size: 34px; }
-    .retry-btn { width: 90%; height: 112px; border-radius: 32px; margin-top: 14px; }
+    .btn-row { width: 90%; margin-top: 14px; }
+    .retry-btn { width: 48%; height: 112px; border-radius: 32px; }
     .retry-text { font-size: 35px; }
+    .home-btn { width: 48%; height: 112px; border-radius: 32px; }
+    .home-text { font-size: 35px; }
   }
 </style>
 
@@ -254,16 +271,26 @@
       router.push({ uri: '/pages/detail' })
     },
 
-    // 重新提问（v1.16.91）：提问页已并入主界面 AI 面板——router.back() 回主界面，
-    // AI 面板仍在输入态、问题保留，可直接修改再问
-    goAsk() {
+    // 重新提问（v1.16.155）：回主界面 + 让主界面立刻重开麦克风接着问。
+    // 跨页只能经 global 传意图（页面模块实例按页面作用域隔离），主界面 onShow 消费后即清空
+    goAskAgain() {
       if (this.$app.$def.isNavigating) return
+      global.aiReturnAction = 'ask'
       router.back()
     },
 
-    // 右滑返回（回主界面——本页由主界面 AI 面板 push 进入）
+    // 直接返回（v1.16.155）：回主界面并关掉 AI 面板（否则返回后仍停在面板上，不算「回主界面」）
+    goHome() {
+      if (this.$app.$def.isNavigating) return
+      global.aiReturnAction = 'home'
+      router.back()
+    },
+
+    // 右滑返回（回主界面——本页由主界面 AI 面板 push 进入，等价于「直接返回」）
     onSwipe(eve) {
       if (eve.direction === 'left' || eve.direction === 'right') {
+        if (this.$app.$def.isNavigating) return
+        global.aiReturnAction = 'home'
         router.back()
       }
     }

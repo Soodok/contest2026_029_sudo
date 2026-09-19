@@ -28,7 +28,9 @@ const records = [];
 const levels = ['四级', '六级'];
 
 for (const [file, level] of [['cet4_raw.txt', '四级'], ['cet6_raw.txt', '六级']]) {
-  const fp = path.join(__dirname, '..', file);
+  const base = path.resolve(__dirname, '..');
+  const fp = path.resolve(base, file);
+  if (fp !== base && !fp.startsWith(base + path.sep)) continue;
   const raw = fs.readFileSync(fp, 'utf-8');
   for (const line of raw.split('\n')) {
     const p = line.split('\t');

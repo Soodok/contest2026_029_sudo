@@ -63,11 +63,15 @@ function main() {
   for (const grp of GROUPS) {
     const stem = grp.dir;
     const name = grp.name;
-    const outDir = path.join(OUT_DIR, stem);
+    const outBase = path.resolve(OUT_DIR)
+    const outDir = path.resolve(outBase, stem)
+    if (outDir !== outBase && !outDir.startsWith(outBase + path.sep)) { console.log('⚠️ 输出路径越界跳过:', stem); continue; }
     // 组内多文件合并（如「生活」= 厨房+居家+衣物+维修+宠物+出行+理财+饮品+育儿+节气+民俗+职场×2）
     let lines = [];
+    const srcBase = path.resolve(SRC_DIR);
     for (const f of grp.files) {
-      const fp = path.join(SRC_DIR, f + '.txt');
+      const fp = path.resolve(srcBase, f + '.txt');
+      if (fp !== srcBase && !fp.startsWith(srcBase + path.sep)) continue;
       if (!fs.existsSync(fp)) { console.log('⚠️ 缺文件跳过:', f); continue; }
       const raw = fs.readFileSync(fp, 'utf-8');
       lines = lines.concat(raw.split('\n').map(l => l.trim()).filter(l => l));

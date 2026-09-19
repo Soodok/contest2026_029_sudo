@@ -444,7 +444,7 @@
     .cat-text { font-size: 20px; margin-top: 6px; }
     /* v1.16.116：提示块上距 14→25、图标行上距 40→29——实测上间隙 20 / 下间隙 44（CSS）不协和，
        两者各让 8px 后上下各 31px 配平，且图标绝对位置不变（一加一减抵消） */
-    .prompt-block { margin-top: 25px; }
+    .prompt-block { margin-top: 15px; }
     .prompt-img { width: 195px; height: 93px; }
     .prompt-bt { top: 8px; width: 37px; height: 37px; }
     .cat-hint { font-size: 23px; letter-spacing: 0px; margin-top: 6px; }
@@ -456,7 +456,7 @@
        压缩行距与按钮高换回底部余量；图标行 margin 仍 40（主人要求图标下移给提示词留空间） */
     /* v1.16.128（主人要求）：胶囊按钮再放大一点点 —— 200×78 → 212×86（v1.16.115 曾为腾垂直
        预算缩到 78，现底部余量充足故加回并略宽）。圆角同步 39→43 */
-    .search-btn { width: 212px; height: 86px; border-radius: 43px; flex: none; margin-top: 10px; }
+    .search-btn { width: 212px; height: 78px; border-radius: 39px; flex: none; margin-top: 8px; }
     .search-btn-l { margin-right: 0; }
     .search-btn-r { margin-left: 0; }
     .search-icon { width: 34px; height: 34px; margin-right: 10px; }
@@ -468,8 +468,8 @@
     .voice-text { font-size: 28px; }
     .search-text { font-size: 35px; }
     .statusbar { height: 91px; padding-top: 41px; }
-    .cat-scroll { margin-top: 41px; }
-    .search-btn-row { margin-top: 24px; }
+    .cat-scroll { margin-top: 28px; }
+    .search-btn-row { margin-top: 12px; }
     .searchbox-voice { height: 130px; }
     .sec2 { flex-direction: column; padding-left: 27px; padding-right: 27px; }
     .sec2-card { width: 100%; height: 108px; border-radius: 54px; flex-direction: row; justify-content: center; align-items: center; flex: none; }
@@ -707,6 +707,24 @@
       // 每次回主页都刷新收藏数（详情页/收藏列表增删后返回即时更新；只在此做，避免 onInit 异步回调丢失）
       this.refreshFavoriteCount()
       this.refreshBtStatus()
+      // v1.16.155：消费 AI 回答页的返回意图（回答页底部双按钮写入 global.aiReturnAction）——
+      //   'ask'  重新提问 → 面板保持打开，并立刻重开麦克风，用户开口即接着问；
+      //   'home' 直接返回 → 关掉 AI 面板，真正回到主界面（否则返回后仍停在面板上）。
+      // ⚠️ 本块不得 return 跳出 onShow（下方 adjustForScreen 被跳过会导致屏幕适配整段失效）
+      if (typeof global !== 'undefined' && global.aiReturnAction) {
+        var aiAct = global.aiReturnAction
+        global.aiReturnAction = ''
+        if (aiAct === 'home') {
+          if (this.aiMode) this.exitAiMode()
+        } else if (aiAct === 'ask' && this.aiMode) {
+          // 延迟 250ms：让主界面先完成一次重排（返回瞬间 DOM 未稳定时开麦会丢状态）
+          var selfAi = this
+          setTimeout(function() {
+            if (selfAi.isDestroyed || !selfAi.aiMode) return
+            selfAi.startAiVoice()
+          }, 250)
+        }
+      }
       // v1.16.68 首次加载判断（主人定案）：索引缓存未建（首次安装/数据更新/清缓存后）→
       // 跳加载页建缓存；建完写标记，之后启动直进主界面不闪页；中断（标记没写）→ 下次自动重走。
       // ⚠️ 必须放 onShow：onInit 阶段 DomPage 未 ready，router.replace 静默无效（v1.16.66 曾因此失效）。
@@ -821,7 +839,15 @@
           // v1.16.3 补回 UI 状态（v1.14.0 精简时误删）：标题显隐 + 分页圆点位置
           self.showAppTitle = (shape === 'pill-shaped') || (shape === 'circle')
           self.showRectTitle = !self.showAppTitle
-          var h = shape === 'pill-shaped' ? 766 : (shape === 'circle' ? 300 : 429)
+          // v1.16.171（主人实测「胶囊屏没适配，按钮卡出去」）：胶囊屏高度不再硬编码 766。
+          // 设计画布宽 300（manifest designWidth），等比缩放下"可用设计高 = 屏高 × 300 ÷ 屏宽"。
+          // 公式自检：方屏 336×480 → 480×300÷336 = 429，正是原方屏硬编码值 ✓ 公式成立；
+          //           胶囊 212×520 → 736，原硬编码 766 超出 30 → 首页底部 AI 搜索按钮被裁。
+          // 拿不到分辨率时退回原值，保证不劣化。
+          var _dw = 300
+          var _sh = (data.screenWidth && data.screenHeight)
+            ? Math.round(data.screenHeight * _dw / data.screenWidth) : 0
+          var h = shape === 'pill-shaped' ? (_sh || 766) : (shape === 'circle' ? 300 : 429)
           // ⚠️ screen1H 必须随形态更新：screen2 用 style="height:{{screen1H}}px" 定高，
           // 若恒为 data 初值 429，则整页总高 = screen1 + 429，滚动范围严重不足
           // → 第二屏底部（设置/收藏卡）永远滑不到（小米手环 pill 屏 766 上必现）

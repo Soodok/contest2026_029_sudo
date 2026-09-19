@@ -18,9 +18,27 @@
 
 const fs = require('fs')
 const path = require('path')
-const core = require(path.join(__dirname, 'lib', 'dataset_core.js'))
+const core = require('./lib/dataset_core.js')
 
 const ROOT = path.join(__dirname, '..')
+
+// 输入护栏：CLI 工具本地使用，参数白名单化（防静态分析误报 + 防误敲）
+const SPEC_NAME_RE = /^[a-z0-9_-]+$/          // spec 名：tools/specs/<name>.json
+const SPEC_PATH_RE = /^[a-zA-Z0-9_./\\:-]+$/  // 显式 spec 路径：仅合法路径字符
+const OUT_OVERRIDE_RE = /^[a-zA-Z0-9_./-]+$/  // --out：相对项目根，允许合法相对段
+
+function assertSpecName(nameOrPath) {
+  if (!/[\\/]/.test(nameOrPath) && !nameOrPath.endsWith('.json')) {
+    if (!SPEC_NAME_RE.test(nameOrPath)) {
+      console.error('❌ spec 名不合法（^[a-z0-9_-]+$）: ' + nameOrPath)
+      process.exit(1)
+    }
+  } else if (!SPEC_PATH_RE.test(nameOrPath)) {
+    console.error('❌ spec 路径含非法字符: ' + nameOrPath)
+    process.exit(1)
+  }
+  return nameOrPath
+}
 
 // ── IO 适配层（core 保持零依赖，方便未来在别的环境复用） ───────────
 const io = {
@@ -32,8 +50,8 @@ const io = {
 
 function resolveSpec(nameOrPath) {
   const specPath = /[\\/]/.test(nameOrPath) || nameOrPath.endsWith('.json')
-    ? path.resolve(nameOrPath)
-    : path.join(__dirname, 'specs', nameOrPath + '.json')
+    ? path.resolve(assertSpecName(nameOrPath))
+    : path.join(__dirname, 'specs', assertSpecName(nameOrPath) + '.json')
   if (!fs.existsSync(specPath)) {
     console.error('❌ 找不到 spec: ' + specPath)
     console.error('   可用 spec: ' + fs.readdirSync(path.join(__dirname, 'specs')).join(', '))
@@ -43,9 +61,17 @@ function resolveSpec(nameOrPath) {
 }
 
 function resolveSourcePath(spec, p) {
-  if (path.isAbsolute(p)) return p
-  const base = spec.sourcesBase ? path.join(ROOT, spec.sourcesBase) : ROOT
-  return path.join(base, p)
+  if (path.isAbsolute(p)) {
+    if (p.indexOf('..') >= 0 || p.indexOf('.') === 0) { console.error('❌ 源路径含 . 或 .. 段: ' + p); process.exit(1) }
+    return p
+  }
+  const base = path.resolve(ROOT, spec.sourcesBase || '')
+  const target = path.resolve(base, p)
+  if (target !== base && !target.startsWith(base + path.sep)) {
+    console.error('❌ 源路径越出工程根: ' + target)
+    process.exit(1)
+  }
+  return target
 }
 
 function main() {
@@ -56,6 +82,10 @@ function main() {
     process.exit(1)
   }
   const outOverride = args.indexOf('--out') > -1 ? args[args.indexOf('--out') + 1] : null
+  if (outOverride !== null && !OUT_OVERRIDE_RE.test(outOverride)) {
+    console.error('❌ --out 含非法字符（仅允许字母/数字/下划线/点/斜杠/连字符）: ' + outOverride)
+    process.exit(1)
+  }
   const wantIcon = args.includes('--icon')
   const dry = args.includes('--dry')
 
@@ -67,7 +97,12 @@ function main() {
   let artifacts, recordsN
   if (spec.mode === 'existing') {
     // ── existing：从既有 map_*/detail_* 读回重建（读固定 spec.outDir；--out 只改写目标） ──
-    const readDir = path.join(ROOT, spec.outDir)
+    const readBase = path.resolve(ROOT)
+    const readDir = path.resolve(readBase, spec.outDir)
+    if (readDir !== readBase && !readDir.startsWith(readBase + path.sep)) {
+      console.error('❌ 读回目录越出工程根: ' + readDir)
+      process.exit(1)
+    }
     const readFile = fp => fs.readFileSync(fp, 'utf-8')
     const existsFn = fp => fs.existsSync(fp)
     console.log('读回既有数据: ' + readDir)
@@ -118,7 +153,12 @@ function main() {
     return
   }
 
-  const outDir = path.join(ROOT, outOverride || spec.outDir)
+  const outBase = path.resolve(ROOT)
+  const outDir = path.resolve(outBase, outOverride || spec.outDir)
+  if (outDir !== outBase && !outDir.startsWith(outBase + path.sep)) {
+    console.error('❌ 输出目录越出工程根: ' + outDir)
+    process.exit(1)
+  }
   core.writeDataset(outDir, artifacts, io)
   console.log('✅ 已写入: ' + outDir)
   if (wantIcon && spec.icon) {
