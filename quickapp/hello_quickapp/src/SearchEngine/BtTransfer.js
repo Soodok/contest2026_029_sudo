@@ -178,6 +178,10 @@ function finalizeFile(ds, fname, rec) {
   }
   if (missing !== -1) {
     _log('文件 ' + fname + ' 缺片#' + missing + '，拒绝落盘（请重新发送）', 'error')
+    // v1.16.176（提交前审查修复 C4）：原实现只改 phase/error，没有终止传输 ——
+    // 残留的 receiving 会让后续分片继续接收、ds-end 仍走校验与注册，
+    // 甚至把 error 覆盖回 done（一边报错一边显示完成）。现显式终止本次传输。
+    receiving = null
     transfer.phase = 'error'
     transfer.error = '资料 ' + fname + ' 传输不完整（缺片），请在手机端重发'
     return Promise.resolve(false)

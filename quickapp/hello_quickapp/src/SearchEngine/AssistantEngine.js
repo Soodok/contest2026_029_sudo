@@ -179,9 +179,14 @@ Assistant.prototype._bindReal = function (conn) {
   var prevHandler = conn.onmessage
   conn.onmessage = function (data) {
     var handled = false
-    if (data && data.data) {
+    // v1.16.176（提交前审查修复 C3）：双兼容 —— 官方互联层可能以 {data:'<json>'} 包装投递，
+    // 也可能直接投递裸字符串/对象（同通道的 BtTransfer 已按此兼容）。原实现只解析包装形态，
+    // 裸投递时语音/AI 结果会完全收不到（真链路静默失败）。
+    var payload = data
+    if (data && typeof data === 'object' && typeof data.data === 'string') payload = data.data
+    if (payload) {
       var msg = null
-      try { msg = JSON.parse(data.data) } catch (e) { msg = null }
+      try { msg = (typeof payload === 'string') ? JSON.parse(payload) : payload } catch (e) { msg = null }
       if (msg && msg.type === 'voice_result' && self._voiceCb) {
         self._voiceCb({ ok: true, text: msg.text || '', mode: MODE.REAL })
         handled = true

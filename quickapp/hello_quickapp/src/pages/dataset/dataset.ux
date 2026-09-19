@@ -130,7 +130,9 @@
   .ds-scroll { width: 100%; height: 100%; flex-direction: column; align-items: center; }
 
   /* v1.16.86 同 index：padding-top 3px 防标题贴顶（rect 标题 20px 字号在 22px 栏内距顶仅 ~1px） */
-  .statusbar { width: 100%; height: 25px; padding-top: 3px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
+  /* v1.16.176（提交前审查修复）：原本 height:25 / padding-top:3，而主界面 v1.16.123 已改为 36/10
+     —— 两页状态栏不一致会让「历史」标题与时间在跳页时上下跳一下。现与主界面同步。 */
+  .statusbar { width: 100%; height: 36px; padding-top: 10px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
   .sb-left { flex: 1; }
   .rect-title { flex: 1; text-align: center; font-size: 20px; color: #FFFFFF; font-weight: 500; }
   .sb-block { flex: 1; flex-direction: column; align-items: flex-end; }
@@ -608,27 +610,41 @@
       } catch (e2) { this.voiceText = '聆听中…' }
       var self = this
       // 超时兜底：12s 未识别自动退出（审查低#11：补 cancel + 提示文案）
+      // v1.16.176（提交前审查修复）：原实现在同一个 tick 里既设提示又把 voiceActive 置 false，
+      // 语音面板随之隐藏 —— 提示文案用户永远看不到。现改为「先显示提示 1.5s，再退出聆听态」。
       this.voiceTimer = setTimeout(function() {
         if (self && !self.isDestroyed && self.voiceActive) {
-          self.voiceActive = false
           self.voiceText = '识别超时，请重试'
+          self.stopWave()
           getAssistant().cancel()
+          if (self._voiceExitTimer) clearTimeout(self._voiceExitTimer)
+          self._voiceExitTimer = setTimeout(function() {
+            if (self && !self.isDestroyed) self.exitVoiceSearch()
+          }, 1500)
         }
       }, 12000)
       getAssistant().recognize(function(r) {
         if (self.isDestroyed || !self.voiceActive) return
         if (self.voiceTimer) { clearTimeout(self.voiceTimer); self.voiceTimer = null }
-        self.voiceActive = false
         self.stopWave()   // v1.16.140：识别结束（正常路径不走 exitVoiceSearch）
         if (r && r.ok && r.text) {
+          self.voiceActive = false
           self.searchQuery = r.text
           self.searchActive = true
           self.resetAndSearch()
+        } else {
+          // v1.16.176：识别失败原本只静默复位（用户不知道发生了什么），现显示提示后再退出
+          self.voiceText = '没听清，请重试'
+          if (self._voiceExitTimer) clearTimeout(self._voiceExitTimer)
+          self._voiceExitTimer = setTimeout(function() {
+            if (self && !self.isDestroyed) self.exitVoiceSearch()
+          }, 1500)
         }
       })
     },
 
     exitVoiceSearch() {
+      if (this._voiceExitTimer) { clearTimeout(this._voiceExitTimer); this._voiceExitTimer = null }
       this.voiceActive = false
       this.stopWave()    // v1.16.140：退出聆听即停声波（防定时器泄漏）
       if (this.voiceTimer) { clearTimeout(this.voiceTimer); this.voiceTimer = null }

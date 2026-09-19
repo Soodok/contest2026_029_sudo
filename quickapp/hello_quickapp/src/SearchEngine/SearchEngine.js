@@ -273,9 +273,15 @@ class SearchEngine {
       _logInfo('懒初始化开始（由搜索触发）', 'init')
       // 补数据路径：懒初始化不经过 init()/initLight()，basePath 仍为 constructor 的空串，
       // 缺了它 meta 读取必失败 → initFailed → 页面误提示「去设置加载」
+      // v1.16.176（提交前审查修复）：这里原本在 basePath 为空时**兜底写死历史集路径** —— 一旦
+      // 有非历史集的引擎走到这条路（basePath 未被注入），它会静默去读历史集的数据（串集/结果错误），
+      // 比失败更糟。所有引擎实例都由 DatasetManager.ensureEngine 创建并注入 basePath（含蓝牙动态集的
+      // 沙箱路径），故此处应为不可达；改成**响亮失败**，让问题暴露而不是被掩盖。
       if (!self.basePath) {
-        self.basePath = '/common/datasets/history/'   // v1.16.122 规范化后历史集数据在集目录内
-        _logInfo('懒初始化设置数据路径: ' + self.basePath, 'init')
+        self._lazyIniting = false
+        self.initFailed = true
+        _logError('懒初始化失败：basePath 未注入（应由 ensureEngine 提供）', 'init')
+        return false
       }
       var ok = await self._loadMeta()
       if (!ok) {
