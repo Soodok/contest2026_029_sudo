@@ -324,7 +324,8 @@
   .ai-box-hint { font-size: 20px; color: #757575; }
 
   /* 中部：圆形麦克风 + 状态文字（复制语音搜索的垂直居中排布） */
-  .ai-mid { width: 258px; flex-direction: column; align-items: center; margin-top: 90px; flex-shrink: 0; }
+  /* v1.16.106：margin 90→50——状态文字换两行（错误/重试提示）时不再把取消顶出屏幕 */
+  .ai-mid { width: 258px; flex-direction: column; align-items: center; margin-top: 50px; flex-shrink: 0; }
   /* 圆形麦克风 56px：聆听中蓝底 #4D9FEE、空闲/出错/思考深灰 #2C2C2E（类切换，禁动态 style） */
   .ai-mic-circle { width: 56px; height: 56px; border-radius: 28px; justify-content: center; align-items: center; flex-shrink: 0; }
   .ai-mic-on { background-color: #4D9FEE; }
@@ -333,7 +334,7 @@
   .ai-status { font-size: 20px; color: #D0D0D4; text-align: center; line-height: 28px; margin-top: 18px; }
 
   /* 底部取消按钮：语音搜索同款（160×56 圆角 28 #3A3A3C） */
-  .ai-cancel { width: 160px; height: 56px; border-radius: 28px; background-color: #3A3A3C; justify-content: center; align-items: center; margin-top: 60px; flex-shrink: 0; }
+  .ai-cancel { width: 160px; height: 56px; border-radius: 28px; background-color: #3A3A3C; justify-content: center; align-items: center; margin-top: 50px; flex-shrink: 0; }
   .ai-cancel-text { font-size: 22px; color: #FFFFFF; }
 
   /* ===== AI 面板胶囊 192x490 放大（语音直答版；主体高 766 - 头部 80） ===== */
@@ -344,11 +345,12 @@
     .ai-box-text { font-size: 28px; line-height: 38px; }
     .ai-box-listening { font-size: 26px; }
     .ai-box-hint { font-size: 26px; }
-    .ai-mid { width: 246px; margin-top: 140px; }
+    /* v1.16.106：140→80，两行状态文字时取消仍在屏内 */
+    .ai-mid { width: 246px; margin-top: 80px; }
     .ai-mic-circle { width: 88px; height: 88px; border-radius: 44px; }
     .ai-mic-img { width: 44px; height: 44px; }
     .ai-status { font-size: 30px; line-height: 40px; margin-top: 26px; }
-    .ai-cancel { width: 220px; height: 88px; border-radius: 44px; margin-top: 100px; }
+    .ai-cancel { width: 220px; height: 88px; border-radius: 44px; margin-top: 70px; }
     .ai-cancel-text { font-size: 34px; }
   }
 
