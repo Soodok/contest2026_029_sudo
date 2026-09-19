@@ -13,7 +13,10 @@
         <!-- 状态栏时间 + 应用名（每屏独立渲染，随内容滚动）；搜索态标题切换为 searchTitle -->
         <div class="statusbar">
           <!-- 矩形手表：左占位 + 顶部居中标题 + 右上时间（三栏 flex 均分保证标题绝对居中） -->
-          <div class="sb-left" if="{{showRectTitle}}"></div>
+          <!-- v1.16.116：方屏蓝牙状态移到左上角（与右上时间同高、距边缘同为 30px 对称） -->
+          <div class="sb-left" if="{{showRectTitle}}">
+            <image class="sb-bt" src="{{btIconSrc}}"></image>
+          </div>
           <text class="rect-title" if="{{showRectTitle}}">{{headerTitle}}</text>
           <div class="sb-block">
             <text class="time">{{time}}</text>
@@ -33,7 +36,7 @@
 
         <!-- 引导词：非搜索态、非语音态显示 -->
         <div class="prompt-block" if="{{!searchActive && !voiceActive}}">
-          <image class="prompt-bt" src="{{btIconSrc}}"></image>
+          <image class="prompt-bt" show="{{showAppTitle}}" src="{{btIconSrc}}"></image>
           <image class="prompt-img" src="/common/icons/prompt.png"></image>
         </div>
 
@@ -195,7 +198,8 @@
   /* 状态栏：每屏顶部普通块级（随内容滚动）；矩形时间靠右，下方小字应用名；左右对称 padding 保证三栏均分后标题落于屏正中 */
   /* v1.16.86：padding-top 3px——rect 标题 20px 字号在 22px 栏内距顶仅 ~1px 贴顶（主人实测），加呼吸空间 */
   .statusbar { width: 100%; height: 25px; padding-top: 3px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
-  .sb-left { flex: 1; }
+  .sb-left { flex: 1; flex-direction: row; align-items: center; }
+  .sb-bt { width: 18px; height: 18px; }
   .sb-block { flex: 1; flex-direction: column; align-items: flex-end; }
   .time { font-size: 16px; color: #757575; font-weight: 400; }
   .app-title { font-size: 18px; color: #FFFFFF; font-weight: 500; margin-top: 3px; }
@@ -383,11 +387,13 @@
     .cat-icon { width: 95px; height: 95px; border-radius: 47px; }
     .cat-icon-img { width: 55px; height: 55px; }
     .cat-text { font-size: 20px; margin-top: 6px; }
-    .prompt-block { margin-top: 14px; }
+    /* v1.16.116：提示块上距 14→25、图标行上距 40→29——实测上间隙 20 / 下间隙 44（CSS）不协和，
+       两者各让 8px 后上下各 31px 配平，且图标绝对位置不变（一加一减抵消） */
+    .prompt-block { margin-top: 25px; }
     .prompt-img { width: 195px; height: 93px; }
     .prompt-bt { top: 8px; width: 37px; height: 37px; }
     .cat-hint { font-size: 23px; letter-spacing: 0px; margin-top: 6px; }
-    .search-box { width: 246px; height: 92px; border-radius: 46px; margin-top: 20px; border: 3px solid #3A3A3C; padding-left: 30px; }
+    .search-box { width: 246px; height: 92px; border-radius: 46px; margin-top: 20px; border: 3px solid #3A3A3C; padding-left: 18px; }
     .search-box-icon { width: 40px; height: 40px; }
     .search-btn-row { flex-direction: column; padding-left: 0; padding-right: 0; margin-top: 0; }
     /* v1.16.113：提示插入后按钮下移被裁 → margin 20→10 补偿（底部余量 0→20px） */
@@ -550,11 +556,12 @@
       catScrollMT() {
         if (this.aiMode || this.searchActive) return 0
         if (this.showKeyboard && this.screentype === 'pill-shaped') return 100
-        // v1.16.114：提示块占位后重算——方屏 20 / 胶囊 24（原 61 是按无提示块版面调的）
-        return this.screentype === 'pill-shaped' ? 40 : 20
+        // v1.16.114：提示块占位后重算——方屏 20 / 胶囊 40（原 61 是按无提示块版面调的）
+        // v1.16.116：胶囊 40→29（与 prompt-block 上距 +11 配平提示文字上下间隙，图标净位置不变）
+        return this.screentype === 'pill-shaped' ? 29 : 20
       },
       btIconSrc() { return this.btOn ? '/common/icons/bt_on.png' : '/common/icons/bt_off.png' },
-      homePlaceholder() { return this.screentype === 'pill-shaped' ? '搜点什么…' : '搜索诗词、历史…' },
+      homePlaceholder() { return this.screentype === 'pill-shaped' ? '搜点…' : '搜索诗词、历史…' },
       searchBoxClass() {
         var c = 'searchbox-normal'
         if (this.voiceActive) c = 'searchbox-voice'
