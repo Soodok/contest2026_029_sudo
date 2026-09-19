@@ -114,6 +114,9 @@
           <text class="more-text">{{moreText}}</text>
         </div>
         <text class="empty-tip" if="{{allLoaded && displayList.length > 0}}">— 已显示全部 —</text>
+        <!-- v1.16.131（主人反馈）：结果区是滚动流末尾，原本没有任何底部留白 —— 滑到底时
+             「显示更多」按钮会被屏幕边缘裁掉一部分。补一段固定留白（if 不占位，故用常驻块） -->
+        <div class="list-bottom-pad"></div>
       </div>
 
       <!-- 第二块：状态栏 + 设置 / 收藏（一屏高）；搜索态隐藏（if 不占位） -->
@@ -320,8 +323,11 @@
   .ai-card { width: 94%; margin-left: 3%; border-radius: 14px; background-color: #1C2530; border: 1px solid #2A4A66; padding: 12px 14px; margin-bottom: 8px; flex-direction: column; flex-shrink: 0; }
   .ai-card-title { font-size: 18px; color: #4D9FEE; font-weight: 600; margin-bottom: 6px; }
   .ai-card-text { font-size: 18px; color: #E8E8E8; line-height: 26px; }
-  .more-btn { width: 94%; margin-left: 3%; height: 64px; border-radius: 14px; background-color: #2C2C2E; justify-content: center; align-items: center; margin-top: 4px; margin-bottom: 8px; flex-shrink: 0; }
-  .more-text { font-size: 22px; color: #4D9FEE; }
+  /* v1.16.131：与结果卡统一 —— 圆角 12（对齐 result-item）、文字 17px（对齐 result-title）、
+     高度 64→48（原比同屏卡片元素粗壮一圈） */
+  .more-btn { width: 94%; margin-left: 3%; height: 48px; border-radius: 12px; background-color: #2C2C2E; justify-content: center; align-items: center; margin-top: 3px; margin-bottom: 3px; flex-shrink: 0; }
+  .list-bottom-pad { width: 100%; height: 60px; flex-shrink: 0; }
+  .more-text { font-size: 17px; color: #4D9FEE; }
   .result-year { font-size: 16px; font-weight: bold; color: #4D9FEE; margin-bottom: 1px; }
   .result-title { font-size: 17px; color: #FFFFFF; margin-bottom: 1px; }
   .result-region { font-size: 13px; color: #757575; }
@@ -452,8 +458,9 @@
     .ai-card { width: 94%; margin-left: 3%; border-radius: 30px; padding: 22px 26px; margin-bottom: 16px; }
     .ai-card-title { font-size: 28px; margin-bottom: 10px; }
     .ai-card-text { font-size: 28px; line-height: 40px; }
-    .more-btn { border-radius: 30px; height: 100px; margin-bottom: 16px; }
-    .more-text { font-size: 32px; }
+    .more-btn { border-radius: 20px; height: 76px; margin-bottom: 10px; }
+    .list-bottom-pad { height: 90px; }
+    .more-text { font-size: 28px; }
     .result-year { font-size: 26px; }
     .result-title { font-size: 30px; }
     .result-region { font-size: 21px; }
@@ -503,6 +510,8 @@
       displayCats: [],
       // 结果列表渐进显示（v1.16.26）：默认只渲染 5 条，避免一次渲染上百节点拖垮手环
       visibleCount: 5,
+      // v1.16.131：✕ 清除的时间戳（用于吞掉冒泡到搜索框的同一次点击）
+      _clearedAt: 0,
       // AI 搜索（v1.16.33）：aiMode=输入的问题将交给 AssistantEngine.answer 生成回答；
       // aiThinking=等待回答；aiAnswer=回答文案（本地由检索结果真实拼出）
       // v1.16.91 起 aiMode 语义改为「AI 助手全屏面板开启」；v1.16.92 面板改语音直答：
@@ -1089,6 +1098,9 @@
     // 搜索框点击：键盘关着→进入搜索（弹键盘）；键盘开着→收起键盘（按键盘状态判断）；语音态不响应
     toggleSearchBox() {
       if (this.voiceActive) return
+      // v1.16.131：点 ✕ 清除内容时事件冒泡到搜索框 —— 原实现会因此误开（或误关）键盘，
+      // 开键盘又带来一次卡顿（主人反馈）。400ms 内视为同一次点击，直接吞掉。
+      if (this._clearedAt && (Date.now() - this._clearedAt) < 400) { this._clearedAt = 0; return }
       if (this.showKeyboard) {
         this.toggleKeyboard()
       } else {
@@ -1385,6 +1397,9 @@
     // v1.16.40：清词后【保持搜索态】（搜索空态引导），不再回分类行——✕ 连点/清词不再触发
     // 多节点翻转（防塌陷），退出搜索统一走右滑
     clearSearch() {
+      // v1.16.131（主人反馈）：✕ 的点击会冒泡到 .search-box 的 @click（= toggleSearchBox，会开键盘），
+      // 这里打时间戳供 toggleSearchBox 识别「同一次点击」，从而吞掉冒泡。
+      this._clearedAt = Date.now()
       this.isClearing = true
       this.searchQuery = ''
       global.searchQuery = ''
