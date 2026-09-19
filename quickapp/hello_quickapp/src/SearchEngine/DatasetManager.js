@@ -170,11 +170,20 @@ async function searchAllAsync(query, options) {
   var initFailed = false
   var allLoaded = true   // v1.16.60：各集渐进式 map 加载全部完成的 AND（翻页到底判定）
 
+  // v1.16.136（主人定案）：集遍历顺序按**查询词散列出的起点轮转** ——
+  // 避免所有查询都从同一个集开始（历史集最靠前且 850 条，容易长期霸占首批结果）；
+  // 用查询词做种子而非真随机 → 同一查询每次结果稳定可复现（演示可重复）。
+  var order = DATASETS.slice()
+  var _seed = 0
+  for (var _si = 0; _si < String(query).length; _si++) _seed = (_seed * 31 + String(query).charCodeAt(_si)) % 9973
+  var _rot = order.length ? (_seed % order.length) : 0
+  if (_rot > 0) order = order.slice(_rot).concat(order.slice(0, _rot))
+
   // 各集搜索并行发起（此前串行 await 24 次，首次搜索还要逐集懒初始化 → 明显卡顿）
   var tasks = []
-  for (var i = 0; i < DATASETS.length; i++) {
+  for (var i = 0; i < order.length; i++) {
    (function(i) {
-    var ds = DATASETS[i]
+    var ds = order[i]
     if (onlyDsId !== null && ds.id !== onlyDsId) return
     if (onlyGroup !== null) {
       var g = GROUP_MAP[onlyGroup]

@@ -1379,11 +1379,21 @@ async _checkAllMapsCache() {
         }
       }
 
-      // 逐 map 加载：首轮至少 2 个；后续按 page 需求追加；筛选模式一次性全部
+      // 逐 map 加载（v1.16.136 总搜索提速，主人定案）：
+      // · 首批（page=1）**最多 2 个 map** 且行数够 MIN_ENOUGH 条即停 —— 原实现要加载到够
+      //   page*pageSize 条，首批常解析 3~6 个 map；6 集并行 = 十几个 map（各约 600 行
+      //   JSON.parse）同时解析，正是「十几个卡片同时出来 + 卡顿」的来源。
+      // · 翻页（page>1）放开上限，由「更多资料」按钮逐步补齐（用户可接受的渐进语义）。
+      // · mapRank 已按候选数降序 → 解析的就是「条数最多的 map」。
       var t3 = Date.now()
-      var need = page * pageSize
+      var MIN_ENOUGH = 4                       // 首批至少 4 条（主人定案：至少 4、至多显示 5）
+      var need = (page <= 1) ? MIN_ENOUGH : page * pageSize
       var minMaps = st.forceAll ? st.mapRank.length : 2
+      // 首批兜底上限 4：正常情况「2 个 map 就够 4 条即停」（1 个 map 约 600 行、候选充足），
+      // 只有候选稀疏时才继续 —— 与「最多两个 map」两条要求同时满足（硬限 2 会让稀疏查询不足 4 条）
+      var maxMaps = st.forceAll ? st.mapRank.length : (page > 1 ? st.mapRank.length : 4)
       while (st.loadedCount < st.mapRank.length &&
+             st.loadedCount < maxMaps &&
              (st.loadedCount < minMaps || st.rows.length < need)) {
         await this._loadNextMapIntoState(st, category, region, filtering)
       }
