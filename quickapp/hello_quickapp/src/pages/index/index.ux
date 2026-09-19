@@ -379,10 +379,13 @@
      show 只切 display，主界面原有节点零插拔（项目铁律 #3） */
   /* v1.16.102：像语音搜索一样自然——去掉 AI 助手标题与 ✕；面板从状态栏下方开始（状态栏自然可见），
      盒子位置与语音搜索的搜索盒完全对齐；退出=底部取消/左右滑 */
-  .ai-panel { position: absolute; left: 0; top: 25px; width: 100%; height: 455px; background-color: #000000; z-index: 15; flex-direction: column; }
+  /* v1.16.145：top 25→36 —— 原值按旧状态栏高度 30 定，v1.16.123 状态栏改成 36 后未同步，
+     黑色遮罩会盖住状态栏下半（「资料库」标题与时间被裁去下半截，主人反馈）；
+     height 455→444（36+444=480 铺满整屏） */
+  .ai-panel { position: absolute; left: 0; top: 36px; width: 100%; height: 444px; background-color: #000000; z-index: 15; flex-direction: column; }
   /* 主体内容区：固定高（rect 整屏 429 - 头部 50；flex:1 不可靠——项目铁律 #2），
      纵向居中——套语音搜索 voice-panel 的居中布局 */
-  .ai-body { width: 100%; height: 455px; flex-direction: column; justify-content: flex-start; align-items: center; }
+  .ai-body { width: 100%; height: 444px; flex-direction: column; justify-content: flex-start; align-items: center; }
 
   /* 顶部语音搜索式大搜索框：同款圆角描边造型（258 宽 / 圆角 28 / 描边 2px #3A3A3C / 背景 #1C1C1E），
      高度 110（比语音搜索框 56 大——AI 场景要放下完整问题文本），内容双向居中 */
