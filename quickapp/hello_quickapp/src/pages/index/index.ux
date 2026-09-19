@@ -24,6 +24,7 @@
         <!-- 搜索框：常驻顶部；非搜索态点击进入搜索，搜索态点击开/收键盘；有词显示输入内容与 ✕ -->
         <div class="search-box {{searchBoxClass}}" @click="toggleSearchBox">
           <image class="search-box-icon" src="/common/icons/search.png" if="{{!searchQuery && !voiceActive}}"></image>
+          <text class="search-placeholder" if="{{!searchActive && !voiceActive}}">{{homePlaceholder}}</text>
           <text class="search-placeholder" if="{{searchActive && !searchQuery && !voiceActive}}">请输入</text>
           <text class="search-input" if="{{searchActive && searchQuery && !voiceActive}}">{{displayQuery}}</text>
           <text class="clear-btn" if="{{searchActive && searchQuery && !voiceActive}}" @click="clearSearch">✕</text>
@@ -31,7 +32,10 @@
         </div>
 
         <!-- 引导词：非搜索态、非语音态显示 -->
-        <text class="guide" if="{{!searchActive && !voiceActive}}">{{guideText}}</text>
+        <div class="prompt-block" if="{{!searchActive && !voiceActive}}">
+          <image class="prompt-bt" src="{{btIconSrc}}"></image>
+          <image class="prompt-img" src="/common/icons/prompt.png"></image>
+        </div>
 
         <!-- 分类横滑行：非搜索态、非语音态显示 -->
         <!-- v1.16.96：外边距用 style 插值驱动——搜索态该节点被 if 隐藏但运行时会保留其
@@ -221,9 +225,12 @@
   .cat-text { font-size: 13px; color: #e6edf3; margin-top: 6px; }
 
   /* 引导词：灰色小字居中（位于分类图标上方，紧贴搜索框下方） */
-  .guide { width: 100%; text-align: center; font-size: 13px; color: #5b6472; letter-spacing: 2px; margin-top: 12px; flex-shrink: 0; }
+  /* v1.16.114 提示块：蓝牙图标（左，绝对对齐 Ask 行）+ Ask anything 图资产 */
+  .prompt-block { position: relative; margin-top: 16px; flex-shrink: 0; }
+  .prompt-img { width: 200px; height: 110px; }
+  .prompt-bt { position: absolute; left: 0; top: 12px; width: 34px; height: 34px; }
   /* v1.16.112 图标行下方引导提示（弱化色，与上方 guide 成对） */
-  .cat-hint { width: 100%; text-align: center; font-size: 13px; color: #5b6472; letter-spacing: 2px; margin-top: 10px; flex-shrink: 0; }
+  .cat-hint { width: 100%; text-align: center; font-size: 13px; color: #5b6472; letter-spacing: 2px; margin-top: 8px; flex-shrink: 0; }
 
   /* 搜索框：位于状态栏下方，深色圆角输入框样式，放大镜靠左，带描边，点击进入搜索页 */
   /* v1.16.103 方屏密度增大（主人定案）：搜索框 258×56→240×50 */
@@ -237,7 +244,7 @@
   /* v1.16.95 修正按钮溢出：本运行时盒模型为 content-box，width:100% + 水平 padding
      会把行撑到 356px 溢出屏幕（按钮两侧卡边）——去掉行内边距，靠按钮宽度控边距 */
   /* v1.16.113：提示插入后按钮下移被裁 → 行上距 80→64 补偿（底部余量 0→15px 恢复原观感） */
-  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 64px; flex-shrink: 0; }
+  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 30px; flex-shrink: 0; }
   /* v1.16.89 等宽修正：flex:1 在该运行时失效 → 两按钮按内容收缩不等宽（186 vs 153 实测），
      改固定等宽 154px（336 = 行内边距20 + 间距8 + 154×2），文字/图标水平对齐 */
   /* v1.16.95：content-box 下 136 + 左内边距 14 = 渲染 150；两钮+间距=308，屏幕两侧余 14px */
@@ -375,13 +382,16 @@
     .cat-icon { width: 95px; height: 95px; border-radius: 47px; }
     .cat-icon-img { width: 55px; height: 55px; }
     .cat-text { font-size: 20px; margin-top: 6px; }
-    .guide { font-size: 23px; letter-spacing: 0px; margin-top: 8px; }
+    .prompt-block { margin-top: 18px; }
+    .prompt-img { width: 200px; height: 110px; }
+    .prompt-bt { top: 12px; width: 36px; height: 36px; }
     .cat-hint { font-size: 23px; letter-spacing: 0px; margin-top: 14px; }
     .search-box { width: 246px; height: 92px; border-radius: 46px; margin-top: 20px; border: 3px solid #3A3A3C; padding-left: 30px; }
     .search-box-icon { width: 40px; height: 40px; }
     .search-btn-row { flex-direction: column; padding-left: 0; padding-right: 0; margin-top: 0; }
     /* v1.16.113：提示插入后按钮下移被裁 → margin 20→10 补偿（底部余量 0→20px） */
-    .search-btn { width: 220px; height: 96px; border-radius: 48px; flex: none; margin-top: 10px; }
+    /* v1.16.114 按钮略缩 */
+    .search-btn { width: 200px; height: 84px; border-radius: 42px; flex: none; margin-top: 10px; }
     .search-btn-l { margin-right: 0; }
     .search-btn-r { margin-left: 0; }
     .search-icon { width: 34px; height: 34px; margin-right: 10px; }
@@ -494,6 +504,8 @@
       activeDatasetId: null,
       screentype: 'rect',
       showKeyboard: false,
+      btOn: false,
+      btTimer: null,
       shouldOpenKeyboard: false,
       isDestroyed: false,
       searchQuery: '',
@@ -536,8 +548,11 @@
       catScrollMT() {
         if (this.aiMode || this.searchActive) return 0
         if (this.showKeyboard && this.screentype === 'pill-shaped') return 100
-        return 61
+        // v1.16.114：提示块占位后重算——方屏 20 / 胶囊 24（原 61 是按无提示块版面调的）
+        return this.screentype === 'pill-shaped' ? 24 : 20
       },
+      btIconSrc() { return this.btOn ? '/common/icons/bt_on.png' : '/common/icons/bt_off.png' },
+      homePlaceholder() { return this.screentype === 'pill-shaped' ? '搜点什么…' : '搜索诗词、历史…' },
       searchBoxClass() {
         var c = 'searchbox-normal'
         if (this.voiceActive) c = 'searchbox-voice'
@@ -604,6 +619,7 @@
     onShow() {
       // 每次回主页都刷新收藏数（详情页/收藏列表增删后返回即时更新；只在此做，避免 onInit 异步回调丢失）
       this.refreshFavoriteCount()
+      this.refreshBtStatus()
       // v1.16.68 首次加载判断（主人定案）：索引缓存未建（首次安装/数据更新/清缓存后）→
       // 跳加载页建缓存；建完写标记，之后启动直进主界面不闪页；中断（标记没写）→ 下次自动重走。
       // ⚠️ 必须放 onShow：onInit 阶段 DomPage 未 ready，router.replace 静默无效（v1.16.66 曾因此失效）。
@@ -681,6 +697,7 @@
     onDestroy() {
       this.isDestroyed = true
       if (this.timeTimer) clearInterval(this.timeTimer)
+      if (this.btTimer) clearInterval(this.btTimer)
       if (this.catScrollTimer) clearTimeout(this.catScrollTimer)
       if (this.pageScrollTimer) clearTimeout(this.pageScrollTimer)
       if (this.searchTimer) clearTimeout(this.searchTimer)
@@ -688,6 +705,17 @@
       // AI 面板（v1.16.92）：清语音超时定时器 + 作废在途识别/问答请求
       if (this._aiVoiceTimer) { clearTimeout(this._aiVoiceTimer); this._aiVoiceTimer = null }
       getAssistant().cancel()
+    },
+
+    // v1.16.114 蓝牙状态刷新（实时查询；失败按未连接）
+    refreshBtStatus() {
+      var self = this
+      if (this.btTimer) { clearInterval(this.btTimer); this.btTimer = null }
+      var probe = function () {
+        getAssistant().checkBtStatus(function (on) { if (!self.isDestroyed) self.btOn = on })
+      }
+      probe()
+      this.btTimer = setInterval(probe, 10000)
     },
 
     updateTime() {

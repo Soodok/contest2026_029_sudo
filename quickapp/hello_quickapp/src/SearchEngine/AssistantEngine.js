@@ -208,6 +208,19 @@ Assistant.prototype._bindReal = function (conn) {
   }
 }
 
+// v1.16.114 蓝牙状态实时查询（首页提示块的连接指示用）：每次真查 getReadyState，
+// 不走 probe 的会话缓存（连接状态会变化，指示器必须实时）
+Assistant.prototype.checkBtStatus = function (cb) {
+  try {
+    var interconnect = require('@system.interconnect')
+    var conn = interconnect.instance()
+    conn.getReadyState({
+      success: function (data) { cb(!!(data && data.status === 1)) },
+      fail: function () { cb(false) }
+    })
+  } catch (e) { cb(false) }
+}
+
 // ============ 语音搜索 ============
 // 真链路：向手机发送语音搜索请求（手机端做 ASR 后回传文本）
 // 模拟链路：从资料集高频词中抽一个词作为"识别结果"（延迟 SIM_LATENCY），
