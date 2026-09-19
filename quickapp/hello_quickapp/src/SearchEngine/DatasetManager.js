@@ -187,10 +187,11 @@ async function searchAllAsync(query, options) {
   var searchedAll = true        // 是否把所有集都搜过（未搜完 → allLoaded 必为 false）
   var eachAllLoaded = true
   var accumulated = 0
-  // v1.16.141（主人二次反馈「感觉还是查过数量、没有停止过」）：除「累计够 target 即停」外，
-  // 再加一道**集探索硬上限** —— 原逻辑在多个集都无结果时会把 6 个集全扫一遍，
-  // 这正是主人感受不到"停止"的最后一个来源。达上限后本轮不再探索，剩余集交给「显示更多」。
-  var MAX_PROBE = 4
+  // v1.16.146（主人选 A）：探索上限放宽为**不限制**（= order.length）。
+  // 原 MAX_PROBE=4 但资料集共 6 个 —— 后 2 个永远搜不到；且点「更多」时 target 递增而探索上限
+  // 不变，4 个集凑不够 target 时 slice 会取到空区间 = 「点更多没反应」。
+  // 该上限当初是为治「没有停止过」加的，而真根因（触底自动翻页）已于 v1.16.141 修复，故放宽。
+  var MAX_PROBE = order.length
   var probed = 0
 
   for (var i = 0; i < order.length; i++) {

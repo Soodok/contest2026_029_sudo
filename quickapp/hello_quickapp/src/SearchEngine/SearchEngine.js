@@ -1127,12 +1127,14 @@ async _checkAllMapsCache() {
       var word = words[i]
       if (word.length === 0) continue
       if (/^[a-zA-Z]+$/.test(word)) {
-        if (word.length >= minPrefix) {
-          for (var j = minPrefix; j <= word.length; j++) {
-            hashes.push(hashCode(word.substring(0, j).toLowerCase()))
-          }
-        } else {
-          hashes.push(hashCode(word.toLowerCase()))
+        // v1.16.147（主人实测）：跳过比 minEnglishPrefix 更短的纯英文词。
+        // 索引侧英文只从 minEnglishPrefix 个字母的前缀起，更短的英文查询不可能命中正确结果，
+        // 只会因「哈希 % bucketSize」的取模碰撞命中无关条目的桶 ——
+        // 实测 hash('d')%2048 == hash('conce')%2048 → 搜 "d" 出 concept/concern。
+        // （中文不受影响：走下方 else 的逐字索引分支，单字查询本身有意义。）
+        if (word.length < minPrefix) continue
+        for (var j = minPrefix; j <= word.length; j++) {
+          hashes.push(hashCode(word.substring(0, j).toLowerCase()))
         }
       } else {
         for (var k = 0; k < word.length; k++) {
