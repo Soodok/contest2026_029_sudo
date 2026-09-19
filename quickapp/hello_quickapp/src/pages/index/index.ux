@@ -236,7 +236,8 @@
      胶囊/圆形各自媒体查询已覆盖 margin，不受影响 */
   /* v1.16.95 修正按钮溢出：本运行时盒模型为 content-box，width:100% + 水平 padding
      会把行撑到 356px 溢出屏幕（按钮两侧卡边）——去掉行内边距，靠按钮宽度控边距 */
-  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 80px; flex-shrink: 0; }
+  /* v1.16.113：提示插入后按钮下移被裁 → 行上距 80→64 补偿（底部余量 0→15px 恢复原观感） */
+  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 64px; flex-shrink: 0; }
   /* v1.16.89 等宽修正：flex:1 在该运行时失效 → 两按钮按内容收缩不等宽（186 vs 153 实测），
      改固定等宽 154px（336 = 行内边距20 + 间距8 + 154×2），文字/图标水平对齐 */
   /* v1.16.95：content-box 下 136 + 左内边距 14 = 渲染 150；两钮+间距=308，屏幕两侧余 14px */
@@ -379,7 +380,8 @@
     .search-box { width: 246px; height: 92px; border-radius: 46px; margin-top: 20px; border: 3px solid #3A3A3C; padding-left: 30px; }
     .search-box-icon { width: 40px; height: 40px; }
     .search-btn-row { flex-direction: column; padding-left: 0; padding-right: 0; margin-top: 0; }
-    .search-btn { width: 220px; height: 96px; border-radius: 48px; flex: none; margin-top: 20px; }
+    /* v1.16.113：提示插入后按钮下移被裁 → margin 20→10 补偿（底部余量 0→20px） */
+    .search-btn { width: 220px; height: 96px; border-radius: 48px; flex: none; margin-top: 10px; }
     .search-btn-l { margin-right: 0; }
     .search-btn-r { margin-left: 0; }
     .search-icon { width: 34px; height: 34px; margin-right: 10px; }
