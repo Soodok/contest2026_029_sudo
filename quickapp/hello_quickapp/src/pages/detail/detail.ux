@@ -235,8 +235,6 @@
     },
 
     async _loadDetail(id) {
-  var self = this
-
   if (typeof global.addRuntimeLog === 'function') {
     global.addRuntimeLog('[detail] 打开 ID=' + id, 'info')
   }

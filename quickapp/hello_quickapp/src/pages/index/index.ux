@@ -511,7 +511,6 @@
   import { isCacheBuilt } from '../../SearchEngine/DatasetManager.js'
   import router from '@system.router'
   import device from '@system.device'
-  import prompt from '@system.prompt'
   import storage from '@system.storage'
 
   // 手写补零（避免 padStart 的轻量运行时兼容风险）

@@ -100,7 +100,6 @@
 
   // ========== 引擎初始化（从 splash.ux 提取，移入 app 生命周期）==========
   var engineInstance = null
-  var engineInitialized = false
 
 
   // 挂载全局接口（幂等，可在引擎就绪前后多次调用）
@@ -263,8 +262,7 @@
       }
     }
 
-    global.historyData = null
-    global.searchEngine = engine
+      global.searchEngine = engine
   }
 
 
