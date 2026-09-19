@@ -26,9 +26,9 @@ async function _loadMeta(eng) {
   var metaObj = {}
   try { metaObj = JSON.parse(raw) } catch (e) { metaObj = {} }
   if (!metaObj.fields) {
-    // 历史集特例（v1.16.63 修复）：数据在 /common 根目录，但声明文件
-    // （含 fields）在 datasets/history/meta.json —— 直接读它拿字段名
-    if (eng.basePath === '/common/') {
+    // 历史集特例（v1.16.63；v1.16.122 后数据已归入 datasets/history/，声明文件同目录）：
+    // meta.txt 无 fields 时读 meta.json 拿字段名
+    if (eng.basePath === '/common/datasets/history/') {
       raw = await _readText('/common/datasets/history/meta.json')
       try { metaObj = JSON.parse(raw) } catch (e1) { metaObj = {} }
     }
@@ -38,7 +38,7 @@ async function _loadMeta(eng) {
     try { metaObj = JSON.parse(raw) } catch (e2) { metaObj = {} }
   }
   // 历史集最终兜底：物化列序就是 cause/impact（v1.16.63）
-  var isHistory = (eng.basePath === '/common/')
+  var isHistory = (eng.basePath === '/common/datasets/history/')
   if (!metaObj.fields && isHistory) {
     metaObj.fields = { detail: ['cause', 'impact'] }
   }

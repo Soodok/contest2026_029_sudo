@@ -4,8 +4,8 @@
   "version": 4,
   "category": "历史",
   "author": "sudo",
-  "basePath": "/common/",
-  "dataNote": "历史集为 v4 旧格式存量数据，数据文件（meta.txt/map_*/detail_*/block_*/year_index.txt）位于 /common/ 根目录；由 tools/split_dataset.js history（existing 模式）维护重建",
+  "basePath": "/common/datasets/history/",
+  "dataNote": "历史集为 v4 旧格式存量数据。v1.16.122 资料文件规范化：原散落在 /common/ 根目录的数据文件（meta.txt/map_*/detail_*/block_*/year_index.txt/icon.png）已归入本目录，与其余 5 个资料集结构一致；由 tools/split_dataset.js history（existing 模式）维护重建",
   "totalCount": 850,
   "regionList": [
     "asia",
@@ -53,5 +53,5 @@
     "today_3.txt",
     "today_4.txt"
   ],
-  "icon": "/common/logo.png"
+  "icon": "/common/datasets/history/icon.png"
 }

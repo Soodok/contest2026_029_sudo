@@ -123,7 +123,7 @@
         // v1.16.120：init 加 60s 超时兜底（审查报告 #5）—— readText 回调丢失是本项目
         // 记录过的雷（#18/#84），搜索路径早有 10s race 兜底，唯独 init 没有：一旦挂起，
         // 首次安装的用户会永久停在「正在加载数据…」。超时走既有失败分支转错误态。
-        var _initP = engine.init('/common/', function(percent, message) {
+        var _initP = engine.init('/common/datasets/history/', function(percent, message) {
           self.onProgress(Math.round(percent * 0.7), message)
         })
         var _timeoutP = new Promise(function(resolve) {

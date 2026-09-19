@@ -9,7 +9,7 @@ console.log('[DM] module evaluating')
 // 6 标签 = 6 数据集（主人定的精简架构：集数=标签数，搜索只需遍历 6 个集，
 // 不再是原先 24 集跨集聚合——那套导致搜索慢、缓存大、清缓存耗时、命中率低）
 var DATASETS = [
-  { id: 0, folder: '', name: '历史', tag: '历史', count: 850, icon: '/common/icons/history.png',
+  { id: 0, folder: 'datasets/history/', name: '历史', tag: '历史', count: 850, icon: '/common/datasets/history/icon.png',
     desc: '世界历史大事记，覆盖六大洲从史前到现代的关键事件',
     tags: [ { label: '亚洲', value: 'asia' }, { label: '欧洲', value: 'europe' },
             { label: '非洲', value: 'africa' }, { label: '其他', value: 'other' },

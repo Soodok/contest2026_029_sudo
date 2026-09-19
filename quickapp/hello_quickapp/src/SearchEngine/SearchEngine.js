@@ -270,7 +270,7 @@ class SearchEngine {
       // 补数据路径：懒初始化不经过 init()/initLight()，basePath 仍为 constructor 的空串，
       // 缺了它 meta 读取必失败 → initFailed → 页面误提示「去设置加载」
       if (!self.basePath) {
-        self.basePath = '/common/'
+        self.basePath = '/common/datasets/history/'   // v1.16.122 规范化后历史集数据在集目录内
         _logInfo('懒初始化设置数据路径: ' + self.basePath, 'init')
       }
       var ok = await self._loadMeta()
