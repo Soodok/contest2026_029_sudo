@@ -2,7 +2,7 @@
   // ========== 搜索引擎（全局引擎初始化，从原 splash.ux 提取到 app 生命周期）==========
   import { getSearchEngine } from './SearchEngine/SearchEngine.js'
   // 应用版本（与 src/manifest.json 的 versionName 保持同步——改版本时两处一起改）
-  const APP_VERSION = '1.16.136'  // ⚠️ 必须与 manifest.json versionName 同步（审查第二次发现脱节：1.16.71 落后 46 版）
+  const APP_VERSION = '1.16.137'  // ⚠️ 必须与 manifest.json versionName 同步（审查第二次发现脱节：1.16.71 落后 46 版）
   // 发版检查项：改 manifest.json 的 versionName 时，同一提交内必须改这里（APP_VERSION 用于设置页「关于」展示）
   import { searchAllAsync, getItemByGlobalId, getDatasetEntries, getGroupEntries, getDatasetInfo, warmupAllCaches } from './SearchEngine/DatasetManager.js'
   import { initBtReceiver } from './SearchEngine/BtTransfer.js'

@@ -168,7 +168,6 @@ async function searchAllAsync(query, options) {
   var merged = []
   var total = 0
   var initFailed = false
-  var allLoaded = true   // v1.16.60：各集渐进式 map 加载全部完成的 AND（翻页到底判定）
 
   // v1.16.136（主人定案）：集遍历顺序按**查询词散列出的起点轮转** ——
   // 避免所有查询都从同一个集开始（历史集最靠前且 850 条，容易长期霸占首批结果）；
@@ -179,44 +178,46 @@ async function searchAllAsync(query, options) {
   var _rot = order.length ? (_seed % order.length) : 0
   if (_rot > 0) order = order.slice(_rot).concat(order.slice(0, _rot))
 
-  // 各集搜索并行发起（此前串行 await 24 次，首次搜索还要逐集懒初始化 → 明显卡顿）
-  var tasks = []
+  // v1.16.137（主人定案）：总搜索改为「顺序逐集累加、够数即停」——
+  // 原来 6 个集全部并行发起，峰值十几个 map（各约 600 行）同时 JSON.parse，是卡顿主因。
+  // 现在逐个集搜索、累计卡片数够 target 就 break（后面的集本轮不搜）；用户点「显示更多」
+  // → 页码 +1 → target 增大 → 自然从上次停下的集继续（前面的集命中 _searchState 缓存，很快）。
+  // 「一个集凑不够就继续下一个集，直到凑够为止」由循环本身保证。
+  var target = pageSize * page
+  var searchedAll = true        // 是否把所有集都搜过（未搜完 → allLoaded 必为 false）
+  var eachAllLoaded = true
+  var accumulated = 0
+
   for (var i = 0; i < order.length; i++) {
-   (function(i) {
+    if (accumulated >= target) { searchedAll = false; break }   // 够数即停（主人核心要求）
     var ds = order[i]
-    if (onlyDsId !== null && ds.id !== onlyDsId) return
+    if (onlyDsId !== null && ds.id !== onlyDsId) continue
     if (onlyGroup !== null) {
       var g = GROUP_MAP[onlyGroup]
-      if (!g || !g.datasets || g.datasets.indexOf(ds.id) === -1) return
+      if (!g || !g.datasets || g.datasets.indexOf(ds.id) === -1) continue
     }
     // ⚠️ 分类/地区筛选只对历史集生效：资料集 meta 的 categoryList 为空，
     // 透传给引擎会把该集结果全部滤掉（categoryList[undefined] !== category 恒真）；
-    // 筛选激活时只搜历史集（与聚合改造前的单集搜索行为一致）
-    // 标签筛选（region）对【所有集】生效：各集 meta 的 regionList 都非空（历史集=六大洲、
-    // 生活集=13 个分类……），引擎按 this.regionList[info.regionId] 比对，资料集同样可用。
-    // 仅 category 筛选仍限历史集（资料集 categoryList 为空，且需逐条 loadDetail 读文件，性能差）。
-    if (category !== 'all' && ds.id !== 0) return
-    // ⚠️ 每个集独立超时（v1.16.23）：快应用下 file.readText 回调可能丢失（#18/#84），
-    // 单集卡住会让 Promise.all 永久挂起 → 上层页面 loading 恒 true（「一直搜索中」）。
-    // 这里给每个集 8s 上限，超时按「该集无结果」处理，不影响其余集。
-    // ⚠️ 超时败者防护（审查修复）：8s race 超时后内层任务仍会继续执行，
-    // 其写入会污染聚合结果——settled 后丢弃
-    var settled = false
-    tasks.push(Promise.race([
-      (async function() {
+    // 筛选激活时只搜历史集（与聚合改造前的单集搜索行为一致）。
+    // 标签筛选（region）对【所有集】生效。
+    if (category !== 'all' && ds.id !== 0) continue
+
+    try {
       var eng = ensureEngine(ds)
-    // ⚠️ 一次拉够 page 页的量（v1.16.25 优化）：原先 for (pg=1..page) 让「每集的引擎
-    // 调用次数 = 页码」，翻到第 3 页即 6 集×3 = 18 次调用（真机上成倍放大）。
-    // 现每集只调用一次、取前 pageSize*page 条，再交由下方全局切片与交错排序。
-    var r = await eng.search(query, { page: 1, pageSize: pageSize * page, category: category, region: region })
-    if (settled) return   // 已超时：本集结果作废
-    if (r && r.initFailed) initFailed = true
-    if (!(r && r.allLoaded)) allLoaded = false
-    var items = (r && r.results) || []
-    total += (r && r.total) || 0
-    var card = (eng.display && eng.display.card) || null
-    var mainField = (card && card.mainField) || 'year'
-    var rows = (card && card.rows) || null
+      // ⚠️ 每集独立超时（v1.16.23）：readText 回调可能丢失（#18/#84），单集卡住会让整轮挂起。
+      // 串行后这个保护更重要 —— 没有它，一个卡住的集会让后续所有集都轮不到。
+      var r = await Promise.race([
+        eng.search(query, { page: 1, pageSize: target, category: category, region: region }),
+        new Promise(function(resolve) { setTimeout(function() { resolve(null) }, 8000) })
+      ])
+      if (!r) { eachAllLoaded = false; continue }        // 该集超时：按「无结果」处理，继续下一个集
+      if (r.initFailed) initFailed = true
+      if (!r.allLoaded) eachAllLoaded = false
+      var items = r.results || []
+      total += r.total || 0
+      var card = (eng.display && eng.display.card) || null
+      var mainField = (card && card.mainField) || 'year'
+      var rows = (card && card.rows) || null
       for (var j = 0; j < items.length; j++) {
         var it = items[j]
         it.globalId = encodeGlobalId(ds.id, it.id)
@@ -224,19 +225,14 @@ async function searchAllAsync(query, options) {
         // 主字段≠year 时，卡片第一行显示主字段值（学段/分类值在 region 里）
         if (mainField !== 'year') {
           it.yearDisplay = it.region || ds.tag
-          // 第三行改显集标签：meta.display.card 第三行 ref 与首行同源，
-          // 直接透传 region 会和首行重复显示（英语集两行都是「初中/高中」）
           it.region = ds.tag
         } else if (ds.id !== 0) {
           // 非历史集无年份语义（物化 year=0 会显示「公元元年」）——卡片年份位改显集标签
           it.yearDisplay = ds.tag
         }
-        // 卡片三行大小（meta.display.card.rows → UI 渲染）
-        // ⚠️ 手环9固件雷：模板里 class="a sz-{{$item.x}}" 拼接表达式会让 DOM 属性设置崩
-        // （Unsupported type for setDomAttributes）——必须在此预拼完整类名，模板只做纯变量插值。
-        // 未声明 display.card 的集（历史/诗词）不下发 sz 类，保持页面 CSS 形态基准，不改变现有观感
-        // v1.16.124 审查建议#5：卡片尺寸类。补 rows 空值防护 —— card 声明存在但 rows 缺失时
-        // rows[0] 会抛 TypeError 中断该集搜索（当前 6 集均未声明 display.card，属潜伏雷）
+        // ⚠️ 手环9固件雷：模板里 class 拼接表达式会让 DOM 属性设置崩（Unsupported type for
+        // setDomAttributes）——必须在此预拼完整类名，模板只做纯变量插值。
+        // v1.16.124 审查建议#5：补 rows 空值防护（card 声明存在但 rows 缺失时会抛 TypeError）
         var sz0 = (card && rows && rows[0]) ? rows[0].size : ''
         var sz1 = (card && rows && rows[1]) ? rows[1].size : ''
         var sz2 = (card && rows && rows[2]) ? rows[2].size : ''
@@ -244,16 +240,19 @@ async function searchAllAsync(query, options) {
         it.titleClass = 'result-title' + (sz1 ? ' sz-' + sz1 : '')
         it.catClass = 'result-region' + (sz2 ? ' sz-' + sz2 : '')
         it._dsOrder = i
-        // 该集内条目序号（交错排序依据）
         it._seq = j
         merged.push(it)
       }
-      })(),
-      new Promise(function(resolve) { setTimeout(function() { settled = true; resolve(null) }, 8000) })
-    ]))
-   })(i)
+      accumulated += items.length
+    } catch (e) {
+      eachAllLoaded = false
+    }
   }
-  await Promise.all(tasks)
+  // 只有「所有集都搜过、且每集都渐进加载完」才算全部加载完（未搜完 → 还有「更多」）
+  // ⚠️ 必须带 var：上一版删掉了原声明却漏加 var，隐式全局在严格模式下抛 ReferenceError，
+  // 整个函数失败 → 搜索恒返回 0 条（实测搜「宋朝」0 条即为该 bug）
+  var allLoaded = searchedAll && eachAllLoaded
+
 
   // 交错排序：各集第 1 条 → 各集第 2 条 → …（此前按集顺序排，第 1 页会被排最前的集整页
   // 占满，其余资料集的结果要翻很多页才露出 = 用户感知「部分条目搜不到」）

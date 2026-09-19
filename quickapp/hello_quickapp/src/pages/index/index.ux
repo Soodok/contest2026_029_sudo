@@ -519,8 +519,8 @@
       pageScrollTimer: null,
       snapParams: { iconW: 58, spacing: 17, count: 6, padLeft: 8.5, enabled: true },
       displayCats: [],
-      // 结果列表渐进显示（v1.16.26）：默认只渲染 5 条，避免一次渲染上百节点拖垮手环
-      visibleCount: 5,
+      // 结果列表渐进显示：默认只渲染 4 条（v1.16.137 起与每批搜索结果数一致）
+      visibleCount: 4,
       // v1.16.131：✕ 清除的时间戳（用于吞掉冒泡到搜索框的同一次点击）
       _clearedAt: 0,
       // AI 搜索（v1.16.33）：aiMode=输入的问题将交给 AssistantEngine.answer 生成回答；
@@ -562,7 +562,9 @@
       displayList: [],
       totalCount: 0,
       currentPage: 1,
-      pageSize: 20,
+      // v1.16.137（主人定案）：总搜索每批 4 条 —— 该值即 searchAllAsync 的 target
+      // （pageSize × page = 本轮要凑够的卡片数）；一个集凑不够会自动继续下一个集直到凑够
+      pageSize: 4,
       loading: false,
       allLoaded: false,
       searched: false,
@@ -1594,7 +1596,8 @@
         var MAX_ROWS = 100
         if (page === 1) {
           this.displayList = formatted
-          this.visibleCount = 5        // 新搜索：回到「只显示 5 条」的初始态
+          // v1.16.137：每批就是 4 条（searchAllAsync 的 target），全部展开即可
+          this.visibleCount = formatted.length
         } else {
           this.displayList = this.displayList.concat(formatted)
           if (this.displayList.length > MAX_ROWS) {
@@ -1602,10 +1605,8 @@
             // v1.16.130（性能审查 T3）：头部裁剪后可见数可能大于新长度 → 列表视觉上跳一下，同步对齐
             if (this.visibleCount > this.displayList.length) this.visibleCount = this.displayList.length
           }
-          // v1.16.130：翻页带来新数据 → 放开可见数（每次 +20），保证新数据可见且单次新增节点可控
-          if (!result.allLoaded) {
-            this.visibleCount = Math.min(this.displayList.length, (this.visibleCount || 5) + 20)
-          }
+          // v1.16.137：每批 4 条，追加后全部展开（单次新增节点可控）
+          this.visibleCount = this.displayList.length
         }
         this.totalCount = result.total || 0
         this.currentPage = page
@@ -1633,19 +1634,16 @@
     // 显示更多（v1.16.26）：每次追加 5 条；若本地已显示完但仍未加载完全部结果，
     // 顺带拉下一页（这样「更多」既能展开本地已取到的，也能继续向后取）
     showMore() {
-      // v1.16.130（性能审查 T0③）：渐进渲染加软上限 —— 原实现每次 +5 无上限，连点到底会把
-      // 上百条 × 4 节点一次性插入手环 DOM，是「点几下突然卡死」的典型成因（翻页路径有
-      // MAX_ROWS=100 兜底，这条没有）。到顶后改为触发翻页继续加载。
-      var SOFT_MAX = 40
-      var next = Math.min((this.visibleCount || 5) + 5, SOFT_MAX)
-      if (next === this.visibleCount) {
-        if (!this.allLoaded && !this.loading) this.loadPage(this.currentPage + 1)
+      // v1.16.137（主人定案）：点「显示更多」= 从**下一个资料集**继续搜索（每批 4 条）。
+      // 总搜索现在是「顺序逐集累加、够 4 条即停」，所以页码 +1 就是「继续往下搜」，
+      // 前几批命中的集走 _searchState 缓存，重复调用很快。
+      if (!this.allLoaded && !this.loading) {
+        this.loadPage(this.currentPage + 1)
         return
       }
-      this.visibleCount = next
-      if (this.visibleCount >= this.displayList.length && !this.allLoaded && !this.loading) {
-        this.loadPage(this.currentPage + 1)
-      }
+      // 所有集都搜过（或已加载完）：纯展开本地已取到的，保留软上限防连点插上百节点
+      var SOFT_MAX = 40
+      this.visibleCount = Math.min((this.visibleCount || 4) + 4, SOFT_MAX)
     },
 
     // 搜索态滚到底：自动加载下一页（键盘弹出时不触发；非搜索态双屏滚动不翻页）
