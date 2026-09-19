@@ -104,7 +104,7 @@
         </div>
         <!-- 结果计数：键盘打开也保持显示（v1.16.38）——此前 !showKeyboard 条件让键盘弹出时
              这行消失、下方卡片整体上顶一下；流式布局下保留它无任何副作用 -->
-        <text class="result-count" if="{{searched && !loading && !aiMode}}">共 {{totalCount}} 条结果</text>
+        <text class="result-count" if="{{searched && !loading && !aiMode}}">{{resultCountText}}</text>
         <text class="engine-tip" if="{{showEngineTip}}" @click="goSettings">数据未就绪 · 点此去设置检查</text>
         <!-- v1.16.130（性能审查 T0①）：tid 指定稳定唯一键 —— 框架按 key diff，翻页 concat /
              新搜索整表替换时，内容未变的节点不再逐个 setDomAttributes（手环固件此通道既慢又脆）。
@@ -661,6 +661,15 @@
       aiCardText() {
         if (this.aiThinking) return '正在检索本地资料并生成回答…'
         return this.aiAnswer
+      },
+      // v1.16.143（诊断结论）：结果计数文案 —— 未搜完所有资料集时，totalCount 只是
+      // 「已搜部分的命中数」，用「共」会让人以为搜出了那么多；按状态分文案更诚实。
+      resultCountText() {
+        var n = this.totalCount || 0
+        // allLoaded=true 表示所有资料集都搜过（引擎权威值）
+        return this.allLoaded
+          ? ('共 ' + n + ' 条结果')
+          : ('已找到 ' + n + ' 条 · 点显示更多继续')
       },
       moreText() {
         // v1.16.138：列表最多留 10 条，「还有 N 条」的语义已不适用（N 是分批累计的）；

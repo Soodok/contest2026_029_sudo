@@ -46,7 +46,7 @@
         <scroll class="ds-tags-scroll" scroll-x="{{true}}">
           <div class="ds-tags">
             <div class="{{$item.cls}}" tid="value" for="{{dsTags}}" @click="pickTag($item)">
-              <text class="ds-tag-text">{{$item.label}}</text>
+              <text class="{{$item.textCls}}">{{$item.label}}</text>
             </div>
           </div>
         </scroll>
@@ -161,9 +161,12 @@
   .ds-meta { width: 158px; font-size: 13px; color: #6E7681; text-align: left; margin-top: 8px; }
   .ds-tags-scroll { width: 100%; height: 46px; flex-shrink: 0; margin-top: 14px; }
   .ds-tags { flex-direction: row; padding: 0 14px; align-items: center; }
-  .ds-tag { height: 40px; border-radius: 20px; background-color: #1C1C1E; justify-content: center; align-items: center; padding: 0 16px; margin-right: 8px; flex-shrink: 0; }
-  .ds-tag-on { background-color: #4D9FEE; }
+  /* v1.16.143（主人要求）：选中态改为**蓝色描边** —— 原为整块蓝底（.ds-tag-on 只改 background）。
+     未选中也给同宽描边（透明色）避免选中时尺寸跳动；选中态：深底 + 蓝描边 + 蓝字。 */
+  .ds-tag { height: 40px; border-radius: 20px; background-color: #1C1C1E; border-style: solid; border-width: 1px; border-color: #3A3A3C; justify-content: center; align-items: center; padding: 0 16px; margin-right: 8px; flex-shrink: 0; }
+  .ds-tag-on { background-color: #1C1C1E; border-color: #4D9FEE; }
   .ds-tag-text { font-size: 17px; color: #BBBBBB; }
+  .ds-tag-text-on { color: #4D9FEE; }
 
   /* v1.16.87 缩小：PRO 方屏 258×56 与搜索框同宽视觉密度过高，收为 180×44 */
   .voice-btn { width: 180px; height: 44px; border-radius: 22px; background-color: #24C1E0; margin-top: 12px; justify-content: center; align-items: center; flex-direction: row; flex-shrink: 0; }
@@ -353,7 +356,7 @@
       this.dsCount = (info.count !== undefined) ? info.count : -1
       var tags = []
       for (var i = 0; i < info.tags.length; i++) {
-        tags.push({ label: info.tags[i].label, value: info.tags[i].value, cls: 'ds-tag' })
+        tags.push({ label: info.tags[i].label, value: info.tags[i].value, cls: 'ds-tag', textCls: 'ds-tag-text' })
       }
       this.dsTags = tags
       // 屏幕形态（键盘组件所需）
@@ -401,7 +404,10 @@
       var src = this.dsTags
       for (var i = 0; i < src.length; i++) {
         var on = (src[i].value === this.activeTag)
-        tags.push({ label: src[i].label, value: src[i].value, cls: on ? 'ds-tag ds-tag-on' : 'ds-tag' })
+        // v1.16.143：选中态同时切换文字类（选中时文字也要变蓝，配合蓝色描边）
+        tags.push({ label: src[i].label, value: src[i].value,
+          cls: on ? 'ds-tag ds-tag-on' : 'ds-tag',
+          textCls: on ? 'ds-tag-text ds-tag-text-on' : 'ds-tag-text' })
       }
       this.dsTags = tags
       // 已有词则立即按新范围重搜
