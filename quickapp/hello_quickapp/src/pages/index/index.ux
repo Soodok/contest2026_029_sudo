@@ -77,7 +77,13 @@
           <div class="voice-info">
             <image class="voice-bt-off" src="/common/icons/bluetooth_off.png" if="{{!bluetoothConnected}}"></image>
             <text class="voice-tip" if="{{!bluetoothConnected}}">蓝牙未连接</text>
+            <!-- v1.16.140（主人要求）：未连接时如实标注当前为模拟链路 -->
+            <text class="voice-sim-tip" if="{{!bluetoothConnected}}">仅作为模拟参考</text>
             <text class="voice-tip" if="{{bluetoothConnected}}">{{voiceStatusText}}</text>
+            <!-- v1.16.140：声波图标（模拟波动 —— 无真实音量源，见 startWave 注释） -->
+            <div class="voice-wave">
+              <div class="{{$item.cls}}" for="{{waveBars}}"></div>
+            </div>
           </div>
           <div class="voice-cancel" @click="exitVoiceSearch">
             <text class="voice-cancel-text">取消</text>
@@ -294,6 +300,14 @@
   .voice-tip { font-size: 24px; color: #FFFFFF; margin-bottom: 12px; }
   .voice-bt-off { width: 50px; height: 50px; margin-bottom: 12px; }
   .voice-cancel { width: 160px; height: 56px; border-radius: 28px; background-color: #3A3A3C; justify-content: center; align-items: center; flex-shrink: 0; }
+  /* v1.16.140：模拟提示字 + 声波图标（5 根竖条，高度档位类名由 JS 预拼切换） */
+  .voice-sim-tip { font-size: 14px; color: #757575; margin-bottom: 14px; }
+  .voice-wave { flex-direction: row; align-items: flex-end; height: 34px; margin-top: 4px; }
+  .wbar { width: 6px; margin-right: 5px; border-radius: 3px; background-color: #4D9FEE; flex-shrink: 0; }
+  .h1 { height: 8px; }
+  .h2 { height: 16px; }
+  .h3 { height: 24px; }
+  .h4 { height: 34px; }
   .voice-cancel-text { font-size: 24px; color: #FFFFFF; }
   .search-text { font-size: 22px; color: #FFFFFF; font-weight: 400; }
 
@@ -525,6 +539,9 @@
       visibleCount: 5,
       // v1.16.131：✕ 清除的时间戳（用于吞掉冒泡到搜索框的同一次点击）
       _clearedAt: 0,
+      // v1.16.140：声波图标（5 根竖条，类名 JS 预拼 —— 模板禁复杂表达式）
+      waveBars: [{ cls: 'wbar h2' }, { cls: 'wbar h3' }, { cls: 'wbar h4' }, { cls: 'wbar h3' }, { cls: 'wbar h2' }],
+      _waveTimer: null,
       // AI 搜索（v1.16.33）：aiMode=输入的问题将交给 AssistantEngine.answer 生成回答；
       // aiThinking=等待回答；aiAnswer=回答文案（本地由检索结果真实拼出）
       // v1.16.91 起 aiMode 语义改为「AI 助手全屏面板开启」；v1.16.92 面板改语音直答：
@@ -1029,6 +1046,7 @@
       if (this.$app.$def.isNavigating) return
       if (this.voiceActive) return
       this.voiceActive = true
+      this.startWave()   // v1.16.140：进入聆听即播放声波
       this.log('[HOME-SEARCH] 语音搜索：进入聆听状态')
       this.checkBluetooth()
       var self = this
@@ -1070,6 +1088,7 @@
     // 退出语音聆听态（同时取消在途的识别请求）
     exitVoiceSearch() {
       this.voiceActive = false
+      this.stopWave()    // v1.16.140：退出聆听即停声波（防定时器泄漏）
       // v1.16.124 审查建议#3：清掉 12s 超时定时器，否则退出后重进会被旧定时器误杀
       if (this._voiceTimer) { clearTimeout(this._voiceTimer); this._voiceTimer = null }
       getAssistant().cancel()
@@ -1079,6 +1098,29 @@
     // 演示用（v1.16.127 主人指定）：点击状态栏蓝牙图标手动切换连接/未连接，
     // 同时停掉 10s 轮询 —— 否则真实状态会在下一次轮询把演示切换覆盖回去。
     // 下次进入页面 onShow 会重新 refreshBtStatus，恢复正常轮询。
+    // 声波动画（v1.16.140，模拟）：**拿不到真实音量** —— 手环侧音频经 interconnect 送手机 App
+    // 做 ASR，快应用侧无任何音频数据（v1.16.57 曾因「无真实音量数据源，凑数渲染」删过同款代码）。
+    // 故按随机高度档位轮换模拟，并由「仅作为模拟参考」提示字如实告知。
+    // 主人若要真实随声波动：需手机端在回包时附带音量序列，届时把 waveBars 改为按该序列取档即可。
+    startWave() {
+      var self = this
+      this.stopWave()
+      var tick = function () {
+        if (self.isDestroyed || !self.voiceActive) return
+        var bars = []
+        for (var i = 0; i < 5; i++) {
+          bars.push({ cls: 'wbar h' + (1 + Math.floor(Math.random() * 4)) })
+        }
+        self.waveBars = bars
+      }
+      tick()
+      this._waveTimer = setInterval(tick, 220)
+    },
+
+    stopWave() {
+      if (this._waveTimer) { clearInterval(this._waveTimer); this._waveTimer = null }
+    },
+
     toggleBtDemo() {
       if (this.btTimer) { clearInterval(this.btTimer); this.btTimer = null }
       this.btOn = !this.btOn
