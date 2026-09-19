@@ -49,12 +49,12 @@
     <!-- 两个搜索按钮：矩形左右排列、胶囊/圆形上下排列；左「语音搜索」、右「AI搜索」 -->
         <div class="search-btn-row" if="{{!searchActive && !showKeyboard && !voiceActive}}">
           <div class="search-btn search-btn-l" @click="startVoiceSearch">
-            <image class="search-icon" src="/common/icons/voice_green.png"></image>
-            <text if="{{!isCircle}}" class="search-text">语音</text>
+            <image class="search-icon" src="/common/icons/voice.png"></image>
+            <text if="{{!isCircle}}" class="search-text">语音搜索</text>
           </div>
           <div class="search-btn search-btn-r" @click="enterAiMode">
             <image class="search-icon" src="/common/icons/ai.png"></image>
-            <text if="{{!isCircle}}" class="search-text">AI</text>
+            <text if="{{!isCircle}}" class="search-text">AI搜索</text>
           </div>
         </div>
 
@@ -237,9 +237,9 @@
   /* v1.16.95：content-box 下 136 + 左内边距 14 = 渲染 150；两钮+间距=308，屏幕两侧余 14px */
   /* v1.16.109：内容居中（去左对齐+左内距）——文案精简后居中最均衡（主人定案） */
   .search-btn { position: relative; width: 136px; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: center; align-items: center; flex-shrink: 0; }
-  /* v1.16.109 风格统一：双钮同深底 + 彩色图标（语音绿话筒 / AI 渐变星）+ 白字 */
-  .search-btn-l { margin-right: 4px; background-color: #2A2A2C; }
-  .search-btn-r { margin-left: 4px; background-color: #2A2A2C; }
+  /* v1.16.110 配色：双彩底白标体系——语音=品牌绿、AI=紫罗兰（呼应 AI 星） */
+  .search-btn-l { margin-right: 4px; background-color: #34A853; }
+  .search-btn-r { margin-left: 4px; background-color: #7B5CFF; }
   .search-icon { width: 22px; height: 22px; margin-right: 6px; flex-shrink: 0; }
   .voice-panel { width: 100%; flex: 1; flex-direction: column; justify-content: center; align-items: center; }
   .voice-tip { font-size: 24px; color: #FFFFFF; margin-bottom: 12px; }
