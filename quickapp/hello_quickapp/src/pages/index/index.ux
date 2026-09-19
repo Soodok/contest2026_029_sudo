@@ -206,14 +206,17 @@
      实测结论：本运行时 height 为 border-box 语义（padding-top 不增加总高，只挤压内容区）——
      故「状态栏内容下移」= 加 padding-top 且同时加 height（25→30 / 3→10），
      内容中心由 14 变 20（标题下移 6px），搜索框 margin-top 回 14 使位置仍为 44（下游与垂直预算不变） */
-  .statusbar { position: relative; width: 100%; height: 30px; padding-top: 10px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
+  /* v1.16.123：height 30→36 —— 原内容区仅 20px 装不下 26px 角标，靠负 margin 溢出且**余量 0px**
+     （圆底 30 = 容器底 30），主人实机截图里角标左上被直角裁掉（本机舍入恰好没裁）。
+     现内容区 26px，角标 margin-top -10 → 圆 y5~31，底部留 5px 余量；search-box 上距 10→4 抵消增高 */
+  .statusbar { position: relative; overflow: visible; width: 100%; height: 36px; padding-top: 10px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
   .sb-left { flex: 1; flex-direction: row; align-items: center; }
   /* v1.16.117：蓝牙角标（形态差异由媒体查询控制，见 pill/circle 块） */
   /* v1.16.118：30→26px 内缩 4px（原完全贴边，观感像出屏）；未连接底色改暗红（主人指定，暂定） */
-  .sb-bt-pill { width: 26px; height: 26px; border-radius: 13px; flex-direction: row; justify-content: center; align-items: center; flex-shrink: 0; margin-left: -26px; margin-top: -6px; }
+  .sb-bt-pill { width: 24px; height: 24px; border-radius: 12px; flex-direction: row; justify-content: center; align-items: center; flex-shrink: 0; margin-left: -24px; margin-top: -12px; }
   .sb-bt-on { background-color: #4D9FEE; }
   .sb-bt-off { background-color: #B71C1C; }
-  .sb-bt { width: 17px; height: 17px; }
+  .sb-bt { width: 16px; height: 16px; }
   .sb-block { flex: 1; flex-direction: column; align-items: flex-end; }
   .time { font-size: 16px; color: #757575; font-weight: 400; }
   .app-title { font-size: 18px; color: #FFFFFF; font-weight: 500; margin-top: 3px; }
@@ -253,7 +256,7 @@
 
   /* 搜索框：位于状态栏下方，深色圆角输入框样式，放大镜靠左，带描边，点击进入搜索页 */
   /* v1.16.103 方屏密度增大（主人定案）：搜索框 258×56→240×50 */
-  .search-box { width: 240px; height: 50px; border-radius: 25px; background-color: #1C1C1E; border: 2px solid #3A3A3C; flex-direction: row; justify-content: flex-start; align-items: center; padding-left: 16px; margin-top: 10px; flex-shrink: 0; }
+  .search-box { width: 240px; height: 50px; border-radius: 25px; background-color: #1C1C1E; border: 2px solid #3A3A3C; flex-direction: row; justify-content: flex-start; align-items: center; padding-left: 16px; margin-top: 4px; flex-shrink: 0; }
   .search-box-icon { width: 22px; height: 22px; }
   .voice-text { font-size: 20px; color: #757575; flex: 1; margin-left: 10px; text-align: left; }
 
