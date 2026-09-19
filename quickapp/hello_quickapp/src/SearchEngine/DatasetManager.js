@@ -261,10 +261,14 @@ async function searchAllAsync(query, options) {
   var allLoaded = searchedAll && eachAllLoaded
 
 
-  // 交错排序：各集第 1 条 → 各集第 2 条 → …（此前按集顺序排，第 1 页会被排最前的集整页
-  // 占满，其余资料集的结果要翻很多页才露出 = 用户感知「部分条目搜不到」）
+  // v1.16.142（主人定案）：按**资料标题字数升序**（原为「各集第 1 条 → 各集第 2 条」的交错排序）。
+  // 腕上屏幕窄，短标题一行放得下、长标题要折行 —— 短在前视觉更整齐、扫读更快。
+  // 同字数时按集序稳定排列（避免同分记录顺序抖动）；排序在切片前做，且每次调用都从头重排，
+  // 所以「显示更多」新增批次会与已有批次一起参与全局排序，不会局部乱序。
   merged.sort(function(a, b) {
-    if (a._seq !== b._seq) return a._seq - b._seq
+    var la = (a.title || '').length
+    var lb = (b.title || '').length
+    if (la !== lb) return la - lb
     return a._dsOrder - b._dsOrder
   })
   var start = (page - 1) * pageSize
