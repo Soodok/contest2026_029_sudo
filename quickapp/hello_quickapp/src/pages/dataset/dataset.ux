@@ -84,8 +84,12 @@
       </div>
 
       <!-- ===== 语音聆听态（简化版：提示 + 取消） ===== -->
+      <!-- v1.16.133（主人要求）：本页语音态与主界面一致 —— 未连接显示蓝牙断开图标 + 提示，
+           已连接显示链路文案（聆听中… / 聆听中·演示） -->
       <div class="voice-panel" if="{{voiceActive}}">
-        <text class="voice-tip">{{voiceText}}</text>
+        <image class="voice-bt-off" src="/common/icons/bluetooth_off.png" if="{{!bluetoothConnected}}"></image>
+        <text class="voice-tip" if="{{!bluetoothConnected}}">蓝牙未连接</text>
+        <text class="voice-tip" if="{{bluetoothConnected}}">{{voiceText}}</text>
         <div class="voice-cancel" @click="exitVoiceSearch">
           <text class="voice-cancel-text">取消</text>
         </div>
@@ -175,6 +179,8 @@
 
   .voice-panel { width: 100%; flex-direction: column; align-items: center; margin-top: 30px; }
   .voice-tip { font-size: 26px; color: #4D9FEE; margin-bottom: 20px; }
+  /* v1.16.133：蓝牙未连接图标（尺寸对齐主界面 .voice-bt-off） */
+  .voice-bt-off { width: 50px; height: 50px; margin-bottom: 12px; }
   .voice-cancel { width: 200px; height: 64px; border-radius: 32px; background-color: #2C2C2E; justify-content: center; align-items: center; }
   .voice-cancel-text { font-size: 22px; color: #FFFFFF; }
 
@@ -193,6 +199,7 @@
   .ci-yellow { background-color: #FBBC05; }
 
   @media (shape: pill-shaped) {
+    .voice-bt-off { width: 80px; height: 80px; margin-bottom: 20px; }   /* v1.16.133 对齐主界面胶囊值 */
     .statusbar { height: 91px; padding-top: 41px; justify-content: center; padding-left: 0; padding-right: 0; }
     .sb-block { align-items: center; }
     .time { font-size: 21px; }
@@ -275,6 +282,11 @@
       searchSeq: 0,
       // 语音态
       voiceActive: false,
+      // v1.16.133：语音态蓝牙连接状态（未连接时显示断开图标 + 提示，对齐主界面）
+      bluetoothConnected: false,
+      // v1.16.133：✕ 清空时间戳（吞掉冒泡）+ 空词自动退定时器
+      _clearedAt: 0,
+      _emptyExitTimer: null,
       voiceText: '聆听中…',
       voiceTimer: null,
       timeTimer: null,
@@ -376,6 +388,8 @@
     // ===== 搜索框交互（同主界面简化版） =====
     toggleSearchBox() {
       if (this.voiceActive) return
+      // v1.16.133：同 index.ux —— 点 ✕ 清空的事件冒泡到这里，不应改变键盘状态
+      if (this._clearedAt && (Date.now() - this._clearedAt) < 400) { this._clearedAt = 0; return }
       if (this.showKeyboard) {
         this.showKeyboard = false
         this.finishInput()
@@ -403,11 +417,26 @@
     },
 
     clearSearch() {
+      // v1.16.133（对齐 index.ux 同款修复）：✕ 的点击会冒泡到 .search-box 的 @click
+      // （= toggleSearchBox → openKeyboard），原本会误开键盘并带来一次卡顿
+      this._clearedAt = Date.now()
       this.searchQuery = ''
       this.searchSeq++
       this.displayList = []
       this.searched = false
       this.loading = false
+      // 清空后自动退回资料信息态（主人「搜索栏为空自动回」的同款语义；本页的「回」
+      // 是回资料信息态而非主界面 —— 复用 finishInput 空词分支的既有语义）
+      var self = this
+      if (this._emptyExitTimer) clearTimeout(this._emptyExitTimer)
+      this._emptyExitTimer = setTimeout(function() {
+        self._emptyExitTimer = null
+        if (self.isDestroyed) return
+        if (!self.searchActive) return
+        if (self.searchQuery && self.searchQuery.trim()) return   // 期间又输入了
+        self.showKeyboard = false
+        self.searchActive = false
+      }, 300)
     },
 
     // 收键盘 → 搜索（页内限定该集 + 标签）
@@ -501,7 +530,19 @@
     startVoiceSearch() {
       if (this.voiceActive) return
       this.voiceActive = true
-      this.voiceText = '聆听中…'
+      // v1.16.133（主人要求）：语音态的蓝牙表现与主界面一致 —— 进入聆听先查连接态，
+      // 未连接时显示 bluetooth_off 图标 + 「蓝牙未连接」（主界面同款；本页原缺此项）。
+      // 用 AssistantEngine.checkBtStatus（实时 getReadyState，与主界面左上角标同源）。
+      var selfBt = this
+      try {
+        getAssistant().checkBtStatus(function (on) {
+          if (!selfBt.isDestroyed) selfBt.bluetoothConnected = on
+        })
+      } catch (e) { this.bluetoothConnected = false }
+      // 聆听文案区分真链路 / 模拟链路（对齐主界面 voiceStatusText）
+      try {
+        this.voiceText = getAssistant().getMode() === 'real' ? '聆听中…' : '聆听中·演示'
+      } catch (e2) { this.voiceText = '聆听中…' }
       var self = this
       // 超时兜底：12s 未识别自动退出（审查低#11：补 cancel + 提示文案）
       this.voiceTimer = setTimeout(function() {
