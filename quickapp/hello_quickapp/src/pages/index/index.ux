@@ -225,10 +225,11 @@
   .cat-text { font-size: 13px; color: #e6edf3; margin-top: 6px; }
 
   /* 引导词：灰色小字居中（位于分类图标上方，紧贴搜索框下方） */
-  /* v1.16.114 提示块：蓝牙图标（左，绝对对齐 Ask 行）+ Ask anything 图资产 */
+  /* v1.16.115：素材按 ink 收紧（482×230），显示 195×93（原 110 含空白边）——顺带省出 17px 垂直预算；
+     两行文字各自水平居中（原「Ask」偏左 11px）；蓝牙 glyph 左缘 == 第二行文字左缘，top 使图标与「Ask」视觉居中 */
   .prompt-block { position: relative; margin-top: 16px; flex-shrink: 0; }
-  .prompt-img { width: 200px; height: 110px; }
-  .prompt-bt { position: absolute; left: 0; top: 12px; width: 34px; height: 34px; }
+  .prompt-img { width: 195px; height: 93px; }
+  .prompt-bt { position: absolute; left: 0; top: 8px; width: 37px; height: 37px; }
   /* v1.16.112 图标行下方引导提示（弱化色，与上方 guide 成对） */
   .cat-hint { width: 100%; text-align: center; font-size: 13px; color: #5b6472; letter-spacing: 2px; margin-top: 8px; flex-shrink: 0; }
 
@@ -244,12 +245,12 @@
   /* v1.16.95 修正按钮溢出：本运行时盒模型为 content-box，width:100% + 水平 padding
      会把行撑到 356px 溢出屏幕（按钮两侧卡边）——去掉行内边距，靠按钮宽度控边距 */
   /* v1.16.113：提示插入后按钮下移被裁 → 行上距 80→64 补偿（底部余量 0→15px 恢复原观感） */
-  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 30px; flex-shrink: 0; }
+  .search-btn-row { width: 100%; flex-direction: row; justify-content: center; align-items: center; margin-top: 26px; flex-shrink: 0; }
   /* v1.16.89 等宽修正：flex:1 在该运行时失效 → 两按钮按内容收缩不等宽（186 vs 153 实测），
      改固定等宽 154px（336 = 行内边距20 + 间距8 + 154×2），文字/图标水平对齐 */
   /* v1.16.95：content-box 下 136 + 左内边距 14 = 渲染 150；两钮+间距=308，屏幕两侧余 14px */
   /* v1.16.109：内容居中（去左对齐+左内距）——文案精简后居中最均衡（主人定案） */
-  .search-btn { position: relative; width: 136px; height: 67px; border-radius: 33px; background-color: #4D9FEE; flex-direction: row; justify-content: center; align-items: center; flex-shrink: 0; }
+  .search-btn { position: relative; width: 136px; height: 62px; border-radius: 31px; background-color: #4D9FEE; flex-direction: row; justify-content: center; align-items: center; flex-shrink: 0; }
   /* v1.16.110 配色：双彩底白标体系——语音=品牌绿、AI=紫罗兰（呼应 AI 星） */
   .search-btn-l { margin-right: 4px; background-color: #34A853; }
   .search-btn-r { margin-left: 4px; background-color: #7B5CFF; }
@@ -382,16 +383,17 @@
     .cat-icon { width: 95px; height: 95px; border-radius: 47px; }
     .cat-icon-img { width: 55px; height: 55px; }
     .cat-text { font-size: 20px; margin-top: 6px; }
-    .prompt-block { margin-top: 18px; }
-    .prompt-img { width: 200px; height: 110px; }
-    .prompt-bt { top: 12px; width: 36px; height: 36px; }
-    .cat-hint { font-size: 23px; letter-spacing: 0px; margin-top: 14px; }
+    .prompt-block { margin-top: 14px; }
+    .prompt-img { width: 195px; height: 93px; }
+    .prompt-bt { top: 8px; width: 37px; height: 37px; }
+    .cat-hint { font-size: 23px; letter-spacing: 0px; margin-top: 6px; }
     .search-box { width: 246px; height: 92px; border-radius: 46px; margin-top: 20px; border: 3px solid #3A3A3C; padding-left: 30px; }
     .search-box-icon { width: 40px; height: 40px; }
     .search-btn-row { flex-direction: column; padding-left: 0; padding-right: 0; margin-top: 0; }
     /* v1.16.113：提示插入后按钮下移被裁 → margin 20→10 补偿（底部余量 0→20px） */
-    /* v1.16.114 按钮略缩 */
-    .search-btn { width: 200px; height: 84px; border-radius: 42px; flex: none; margin-top: 10px; }
+    /* v1.16.115 按钮略缩 + 行上距 71→24：提示块占位后总高溢出 85px（胶囊屏 766 实测推算），
+       压缩行距与按钮高换回底部余量；图标行 margin 仍 40（主人要求图标下移给提示词留空间） */
+    .search-btn { width: 200px; height: 78px; border-radius: 39px; flex: none; margin-top: 10px; }
     .search-btn-l { margin-right: 0; }
     .search-btn-r { margin-left: 0; }
     .search-icon { width: 34px; height: 34px; margin-right: 10px; }
@@ -403,7 +405,7 @@
     .search-text { font-size: 35px; }
     .statusbar { height: 91px; padding-top: 41px; }
     .cat-scroll { margin-top: 41px; }
-    .search-btn-row { margin-top: 71px; }
+    .search-btn-row { margin-top: 24px; }
     .searchbox-voice { height: 130px; }
     .sec2 { flex-direction: column; padding-left: 27px; padding-right: 27px; }
     .sec2-card { width: 100%; height: 108px; border-radius: 54px; flex-direction: row; justify-content: center; align-items: center; flex: none; }
@@ -549,7 +551,7 @@
         if (this.aiMode || this.searchActive) return 0
         if (this.showKeyboard && this.screentype === 'pill-shaped') return 100
         // v1.16.114：提示块占位后重算——方屏 20 / 胶囊 24（原 61 是按无提示块版面调的）
-        return this.screentype === 'pill-shaped' ? 24 : 20
+        return this.screentype === 'pill-shaped' ? 40 : 20
       },
       btIconSrc() { return this.btOn ? '/common/icons/bt_on.png' : '/common/icons/bt_off.png' },
       homePlaceholder() { return this.screentype === 'pill-shaped' ? '搜点什么…' : '搜索诗词、历史…' },
