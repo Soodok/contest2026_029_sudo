@@ -38,11 +38,12 @@
           <text class="section-name">{{$item.name}}</text>
           <text class="section-body">{{$item.body}}</text>
         </div>
-        <!-- 尾注（免责声明等） -->
-        <text class="card-note" show="{{phase === 'ok' && cardNote}}">{{cardNote}}</text>
+        <!-- 尾注（免责声明等）：v1.16.129 改类控制 —— show=false 在本运行时仍占位，
+             无尾注/无来源时会在「卡片详情」与「重新提问」之间留出大片空白（主人反馈） -->
+        <text class="{{noteClass}}">{{cardNote}}</text>
 
         <!-- 来源条目卡列表：点击进词条详情 -->
-        <div class="src-block" show="{{phase === 'ok' && sourceList.length > 0}}">
+        <div class="{{srcBlockClass}}">
           <text class="src-title">来源</text>
           <div class="src-item" for="{{sourceList}}" @click="openSource($item)">
             <text class="src-item-title">{{$item.title}}</text>
@@ -91,6 +92,9 @@
   .section-name { font-size: 16px; font-weight: bold; color: #4D9FEE; margin-bottom: 4px; }
   .section-body { font-size: 16px; line-height: 25px; color: #E5E5EA; }
   .card-note { width: 100%; font-size: 13px; line-height: 19px; color: #6E7681; text-align: center; margin-bottom: 7px; }
+  /* 空态：高度/字号/下距全部归零，彻底不占位（本运行时 show=false 仍占位，故不能只靠 show） */
+  .card-note-empty { height: 0; font-size: 0; line-height: 0; margin-bottom: 0; overflow: hidden; }
+  .src-block-empty { height: 0; margin-bottom: 0; overflow: hidden; }
 
   .src-title { font-size: 22px; color: #757575; margin-bottom: 10px; }
   .src-item { width: 100%; background-color: #1C1C1E; border-radius: 18px; padding: 14px 22px; margin-bottom: 10px; flex-direction: column; flex-shrink: 0; }
@@ -123,6 +127,8 @@
     .section-name { font-size: 32px; margin-bottom: 12px; }
     .section-body { font-size: 28px; line-height: 44px; }
     .card-note { width: 90%; font-size: 22px; line-height: 32px; margin-bottom: 14px; }
+    .card-note-empty { height: 0; font-size: 0; line-height: 0; margin-bottom: 0; }
+    .src-block-empty { height: 0; margin-bottom: 0; }
     .src-title { font-size: 30px; margin-bottom: 14px; }
     .src-item { width: 90%; border-radius: 32px; padding: 24px 28px; margin-bottom: 14px; }
     .src-item-title { font-size: 30px; }
@@ -150,6 +156,13 @@
         if (this.phase === 'error') return '回答丢失，请重新提问'
         if (this.phase === 'loading') return '加载中…'
         return ''
+      },
+      // v1.16.129：尾注/来源在无内容时高度归零（show=false 仍占位会导致卡片与按钮间留大片空白）
+      noteClass() {
+        return (this.phase === 'ok' && this.cardNote) ? 'card-note' : 'card-note card-note-empty'
+      },
+      srcBlockClass() {
+        return (this.phase === 'ok' && this.sourceList.length > 0) ? 'src-block' : 'src-block src-block-empty'
       }
     },
 

@@ -13,15 +13,13 @@
         <!-- 状态栏时间 + 应用名（每屏独立渲染，随内容滚动）；搜索态标题切换为 searchTitle -->
         <div class="statusbar">
           <!-- 矩形手表：左占位 + 顶部居中标题 + 右上时间（三栏 flex 均分保证标题绝对居中） -->
-          <!-- v1.16.117：蓝牙角标——圆形状态底（连=蓝 / 未连=红）+ 白标，贴屏幕左上角。
-               置于 statusbar 直接子级且**无条件渲染**（零节点插拔，铁律 #4）；胶囊/圆屏由媒体查询隐藏。
-               实测要点：① absolute 在 flex 容器内不渲染（试过 3 轮全空）→ 改用「flex 项 + 负 margin」；
-               ② 负 margin 会被父级边框盒裁剪 → 必须挂在 border box 覆盖整屏的 statusbar 上，不能放 sb-left 内；
-               ③ margin-left:-30 抵消自身宽度 → 净占 0，三栏仍等分，标题绝对居中不受影响 -->
-          <div class="sb-bt-pill {{btPillClass}}">
-            <image class="sb-bt" src="/common/icons/bt_white.png"></image>
+          <!-- v1.16.127 蓝牙状态标识：项目既有图标（bluetooth_off/on，非自绘），放在**左槽内部** ——
+               ⚠️ v1.16.126 曾把它放在三栏之外，占了 flex 均分宽度 → 「资料库」标题被挤偏（主人反馈）；
+               放进 sb-left 后三栏重新等分，标题恢复绝对居中。
+               点击切换连接态（演示用，见 toggleBtDemo）。仅方屏显示（if 与 rect-title 同条件）。 -->
+          <div class="sb-left" if="{{showRectTitle}}">
+            <image class="sb-bt" src="{{btIconSrc}}" @click="toggleBtDemo"></image>
           </div>
-          <div class="sb-left" if="{{showRectTitle}}"></div>
           <text class="rect-title" if="{{showRectTitle}}">{{headerTitle}}</text>
           <div class="sb-block">
             <text class="time">{{time}}</text>
@@ -213,12 +211,8 @@
      判断圆是否被裁以「逐行宽度分布」为准（完整圆 = 顶窄→中宽→底窄，被裁则首末行突然变宽） */
   .statusbar { position: relative; overflow: visible; width: 100%; height: 36px; padding-top: 10px; flex-direction: row; justify-content: flex-end; align-items: center; padding-left: 30px; padding-right: 30px; flex-shrink: 0; }
   .sb-left { flex: 1; flex-direction: row; align-items: center; }
-  /* v1.16.117：蓝牙角标（形态差异由媒体查询控制，见 pill/circle 块） */
-  /* v1.16.118：30→26px 内缩 4px（原完全贴边，观感像出屏）；未连接底色改暗红（主人指定，暂定） */
-  .sb-bt-pill { width: 24px; height: 24px; border-radius: 12px; flex-direction: row; justify-content: center; align-items: center; flex-shrink: 0; margin-left: -24px; margin-top: -12px; }
-  .sb-bt-on { background-color: #4D9FEE; }
-  .sb-bt-off { background-color: #B71C1C; }
-  .sb-bt { width: 16px; height: 16px; }
+  /* v1.16.127 蓝牙状态标识：置于 sb-left 槽内（不占三栏等分之外的宽度，标题居中不受影响） */
+  .sb-bt { width: 22px; height: 22px; flex-shrink: 0; }
   .sb-block { flex: 1; flex-direction: column; align-items: flex-end; }
   .time { font-size: 16px; color: #757575; font-weight: 400; }
   .app-title { font-size: 18px; color: #FFFFFF; font-weight: 500; margin-top: 3px; }
@@ -395,11 +389,10 @@
 
   /* ===== 圆屏 466（Watch S3/S4）：5 个图标整行居中，不横滑 ===== */
   @media (shape: circle) {
-    .sb-bt-pill { display: none; }
+    .sb-bt { display: none; }
   }
     /* ===== 胶囊 192x490（手环 9）：设置/收藏上下两行全宽卡片 ===== */
   @media (shape: pill-shaped) {
-    .sb-bt-pill { display: none; }
     .prompt-bt { display: none; }
     .statusbar { justify-content: center; padding-left: 0; padding-right: 0; }
     .sb-block { align-items: center; }
@@ -423,7 +416,9 @@
     /* v1.16.113：提示插入后按钮下移被裁 → margin 20→10 补偿（底部余量 0→20px） */
     /* v1.16.115 按钮略缩 + 行上距 71→24：提示块占位后总高溢出 85px（胶囊屏 766 实测推算），
        压缩行距与按钮高换回底部余量；图标行 margin 仍 40（主人要求图标下移给提示词留空间） */
-    .search-btn { width: 200px; height: 78px; border-radius: 39px; flex: none; margin-top: 10px; }
+    /* v1.16.128（主人要求）：胶囊按钮再放大一点点 —— 200×78 → 212×86（v1.16.115 曾为腾垂直
+       预算缩到 78，现底部余量充足故加回并略宽）。圆角同步 39→43 */
+    .search-btn { width: 212px; height: 86px; border-radius: 43px; flex: none; margin-top: 10px; }
     .search-btn-l { margin-right: 0; }
     .search-btn-r { margin-left: 0; }
     .search-icon { width: 34px; height: 34px; margin-right: 10px; }
@@ -584,9 +579,9 @@
         // v1.16.116：胶囊 40→29（与 prompt-block 上距 +11 配平提示文字上下间隙，图标净位置不变）
         return this.screentype === 'pill-shaped' ? 29 : 20
       },
-      btIconSrc() { return this.btOn ? '/common/icons/bt_on.png' : '/common/icons/bt_off.png' },
-      // 方屏左上角蓝牙角标底色（连=蓝 / 未连=红）——完整类名 JS 预拼，模板纯变量插值
-      btPillClass() { return this.btOn ? 'sb-bt-pill sb-bt-on' : 'sb-bt-pill sb-bt-off' },
+      // v1.16.127：改用项目既有的一对图标（off=深红底红标 / on=浅蓝底蓝标）
+      btIconSrc() { return this.btOn ? '/common/icons/bluetooth_on.png' : '/common/icons/bluetooth_off.png' },
+      // v1.16.126：改用既有图标 bluetooth_off.png（自带圆底），不再需要拼圆底色类
       homePlaceholder() { return this.screentype === 'pill-shaped' ? '搜点…' : '搜索诗词、历史…' },
       searchBoxClass() {
         var c = 'searchbox-normal'
@@ -1051,6 +1046,17 @@
       if (this._voiceTimer) { clearTimeout(this._voiceTimer); this._voiceTimer = null }
       getAssistant().cancel()
       this.log('[HOME-SEARCH] 语音搜索结束')
+    },
+
+    // 演示用（v1.16.127 主人指定）：点击状态栏蓝牙图标手动切换连接/未连接，
+    // 同时停掉 10s 轮询 —— 否则真实状态会在下一次轮询把演示切换覆盖回去。
+    // 下次进入页面 onShow 会重新 refreshBtStatus，恢复正常轮询。
+    toggleBtDemo() {
+      if (this.btTimer) { clearInterval(this.btTimer); this.btTimer = null }
+      this.btOn = !this.btOn
+      if (typeof global.addRuntimeLog === 'function') {
+        global.addRuntimeLog('[首页] 演示：蓝牙状态切换为 ' + (this.btOn ? '已连接' : '未连接'), 'info')
+      }
     },
 
     // 检查蓝牙连接状态（未连接则提示并进入演示）
